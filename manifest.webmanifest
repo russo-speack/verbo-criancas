@@ -1,0 +1,10 @@
+{
+  "name": "Verbo Crianças",
+  "short_name": "Verbo Crianças",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fa",
+  "theme_color": "#123b70",
+  "lang": "pt-BR",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

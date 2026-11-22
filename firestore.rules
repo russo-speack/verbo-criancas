@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // ---- quem é quem ----
+    function signedIn() { return request.auth != null; }
+    function authed() { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    function profilePath() { return /databases/$(db)/documents/users/$(request.auth.uid); }
+    function hasProfile() { return authed() && exists(profilePath()); }
+    function me() { return get(profilePath()).data; }
+    function active() { return hasProfile() && me().active == true; }
+    function isPais() { return active() && me().role == 'pais'; }
+    function isTia() { return active() && me().role == 'tia'; }
+    function isStaff() { return active() && me().role in ['recepcao', 'coord', 'admin']; }
+    function isManager() { return active() && me().role in ['coord', 'admin']; }
+    function isAdmin() { return active() && me().role == 'admin'; }
+    function myFam() { return me().fam; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // Primeiro acesso: enquanto config/main não existe, o primeiro administrador pode se criar.
+    function configPath() { return /databases/$(db)/documents/config/main; }
+    function bootstrapping() {
+      return authed() && !exists(configPath()) && getAfter(configPath()).data.bootstrapped == true;
+    }
+
+    // ---- contas ----
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid || isStaff();
+      allow create: if bootstrapping() && request.auth.uid == uid && request.resource.data.role == 'admin' && request.resource.data.active == true;
+      allow update: if isAdmin()
+        || (request.auth.uid == uid && active() && changed().hasOnly(['tokens']));
+    }
+
+    // ---- abertura do check-in e contagem por sala (lida até por visitantes) ----
+    match /config/main {
+      allow get: if true;
+      allow create: if bootstrapping();
+      allow update: if isStaff() || (isTia() && changed().hasOnly(['counts']));
+    }
+
+    match /rooms/{id} {
+      allow read: if signedIn();
+      allow create: if isManager() || bootstrapping();
+      allow update: if isManager();
+    }
+    match /tias/{id} {
+      allow read: if authed();
+      allow create, update: if isManager();
+    }
+    match /events/{id} {
+      allow read: if authed();
+      allow create, update: if isManager();
+    }
+
+    // ---- famílias, crianças e avisos ----
+    match /families/{id} {
+      allow read: if isStaff() || isTia()
+        || (isPais() && myFam() == id)
+        || (signedIn() && resource.data.owner == request.auth.uid);
+      allow create: if isStaff()
+        || (signedIn() && request.resource.data.visitor == true && request.resource.data.owner == request.auth.uid);
+      allow update: if isStaff();
+    }
+
+    match /kids/{id} {
+      allow read: if isStaff() || isTia()
+        || (isPais() && resource.data.fam == myFam())
+        || (signedIn() && resource.data.owner == request.auth.uid);
+      allow create: if isStaff()
+        || (signedIn() && request.resource.data.visitor == true && request.resource.data.owner == request.auth.uid && request.resource.data.status == 'in');
+      allow update: if isStaff() || isTia()
+        || (isPais() && resource.data.fam == myFam() && request.resource.data.fam == resource.data.fam
+            && changed().hasOnly(['status', 'time', 'out', 'by', 'packs', 'packWeek', 'cards']));
+    }
+
+    match /alerts/{id} {
+      allow read: if isStaff() || isTia()
+        || (isPais() && resource.data.fam == myFam())
+        || (signedIn() && exists(/databases/$(db)/documents/families/$(resource.data.fam))
+            && get(/databases/$(db)/documents/families/$(resource.data.fam)).data.owner == request.auth.uid);
+      allow create: if isStaff() || isTia();
+      allow update: if isStaff() || isTia()
+        || (isPais() && resource.data.fam == myFam() && changed().hasOnly(['seen', 'reply']))
+        || (signedIn() && exists(/databases/$(db)/documents/families/$(resource.data.fam))
+            && get(/databases/$(db)/documents/families/$(resource.data.fam)).data.owner == request.auth.uid
+            && changed().hasOnly(['seen', 'reply']));
+    }
+
+    // ---- registro de ações: qualquer pessoa conectada escreve, só o administrador lê ----
+    match /audit/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn();
+    }
+  }
+}

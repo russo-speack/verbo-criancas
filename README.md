@@ -1,0 +1,109 @@
+# Verbo Crianças: protótipo dos apps
+
+Protótipo navegável do Verbo Crianças, com a identidade visual do guia. Ele reúne em uma só página:
+
+| Endereço | O que é |
+| --- | --- |
+| `#pais` | App dos pais (login por e-mail ou telefone): check-in dos filhos, avisos por notificação, agenda e cartas de histórias |
+| `#tias` | App das tias (login próprio): sala, check-in e check-out, cuidados da criança e envio de avisos |
+| `#gestao` | Gestão (login por perfil): painel, famílias, equipe, agenda, relatórios, acessos e registro |
+| `#visitante` | Página aberta pelo QR Code da entrada, sem instalar nada |
+
+Os quatro conversam entre si dentro da mesma página. Por exemplo: a tia envia um aviso e ele aparece como notificação no app dos pais, e a gestão vê a ação no registro.
+
+## Modo protótipo (sem Firebase): login por app
+
+Cada app pede o seu próprio login. Uma conta de pais não entra no app das tias, e assim por diante. A tela mostra as contas de exemplo, com o botão **Preencher**.
+
+| App | Perfil | Entrada | Senha |
+| --- | --- | --- | --- |
+| Pais | Maria Souza | maria@email.example | souza123 |
+| Pais | Carla Almeida | carla@email.example | almeida123 |
+| Tias | Tia Raquel | raquel@verbo.example | raquel123 |
+| Tias | Tia Joana | joana@verbo.example | joana123 |
+| Gestão | Administrador | admin@verbo.example | admin123 |
+| Gestão | Coordenação | coord@verbo.example | coord123 |
+| Gestão | Recepção | recepcao@verbo.example | recepcao123 |
+
+Há mais contas de exemplo na tela de cada app.
+
+**O que cada perfil da gestão vê:**
+
+- **Recepção:** painel e famílias (não altera capacidade das salas).
+- **Coordenação:** também equipe, agenda e relatórios.
+- **Administrador:** tudo, incluindo **Acessos** (criar contas, desativar, redefinir senha) e o registro de ações.
+
+Ao cadastrar uma família, o sistema cria o acesso do responsável (entra com o telefone). Ao criar o acesso de uma tia, ela já aparece na equipe. Desativar uma conta tira a pessoa do app na hora.
+
+## Arquivos
+
+- `index.html`: a página
+- `styles.css`: visual (cores, fontes, espaçamentos)
+- `app.js`: telas e comportamento
+- `favicon.svg`: ícone da aba
+- `cloud.js`, `firebase-config.js`, `firebase-messaging-sw.js`, `manifest.webmanifest`, `firestore.rules`, `firebase.json` e a pasta `functions/`: ligação com o Firebase (veja abaixo)
+
+Mantenha tudo na mesma pasta, como está.
+
+## Como publicar no GitHub e testar
+
+1. No GitHub, clique em **New repository**, dê um nome (por exemplo `verbo-criancas`) e deixe **Public**. No plano gratuito, o GitHub Pages só funciona em repositório público. O protótipo só tem dados de exemplo.
+2. Na página do repositório, clique em **Add file > Upload files**, arraste os arquivos desta pasta e clique em **Commit changes**.
+3. Vá em **Settings > Pages**. Em **Build and deployment**, escolha **Deploy from a branch**, branch **main** e pasta **/ (root)**, e salve.
+4. Depois de um ou dois minutos, o endereço aparece nessa mesma tela, no formato `https://SEU-USUARIO.github.io/verbo-criancas/`.
+5. Para abrir direto em cada app, acrescente ao endereço `#pais`, `#tias`, `#gestao` ou `#visitante`.
+
+Para testar no celular, abra o endereço no navegador. A página pede internet apenas para carregar as fontes Nunito.
+
+No modo protótipo, o login é simulado: as senhas de exemplo ficam visíveis no código e nada é guardado. Ao recarregar a página, tudo volta ao início, e a notificação aparece só dentro da página. Isso serve para testar telas e fluxos. Para dados reais, ligue ao Firebase.
+
+## Ligar ao Firebase (login real, dados sincronizados e notificações)
+
+Sem configuração, o app roda como protótipo local. Para ligar ao Firebase, siga estes passos uma vez:
+
+1. **Projeto:** em console.firebase.google.com, crie o projeto "Verbo Crianças".
+2. **Plano Blaze:** em *Uso e faturamento*, mude para o plano **Blaze**. As funções que criam acessos e enviam as notificações exigem isso. Para uma igreja, o uso costuma ficar dentro da cota gratuita.
+3. **Authentication:** em *Authentication > Método de login*, ative **E-mail/senha** e **Anônimo**. O anônimo é o que permite o check-in de visitante pelo QR Code, sem criar conta.
+4. **Domínio:** em *Authentication > Configurações > Domínios autorizados*, adicione `russo-speack.github.io`.
+5. **Firestore:** em *Firestore Database > Criar banco de dados*, escolha o modo **produção** e a região `southamerica-east1` (São Paulo).
+6. **Notificações:** em *Configurações do projeto > Cloud Messaging > Certificados push da Web*, clique em **Gerar par de chaves**. Copie a chave pública.
+7. **App web:** em *Configurações do projeto > Seus apps*, registre um app **Web** e copie o `firebaseConfig`.
+8. **Configuração no código:** abra `firebase-config.js`, cole os valores (`apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`) e a chave do passo 6 em `vapidKey`. Faça o commit no GitHub.
+9. **Regras e funções:** no computador, com o Node.js instalado, na pasta do projeto:
+   ```
+   npm install -g firebase-tools
+   firebase login
+   firebase use --add          (escolha o projeto)
+   cd functions && npm install && cd ..
+   firebase deploy --only firestore:rules,functions
+   ```
+   Se preferir, cole o conteúdo de `firestore.rules` em *Firestore > Regras* e publique. As funções, porém, só sobem pela linha de comando.
+10. **Primeiro administrador:** abra `.../#gestao`. Como ainda não existe ninguém, aparece o formulário **Primeiro acesso**. Crie o administrador logo, antes de divulgar o endereço. Depois disso, o formulário some e o resto é feito em **Gestão > Acessos** (tias e equipe) e **Famílias** (responsáveis).
+
+### Como fica o login
+
+- **Pais:** entram com o **telefone** cadastrado e a senha provisória que a gestão recebe ao cadastrar a família. Na tela **Perfil** podem trocar a senha e ativar as notificações em cada aparelho.
+- **Tias e gestão:** entram com **e-mail** e senha. A senha provisória aparece uma única vez, na tela do administrador. Quem tem e-mail pode usar "Esqueci minha senha".
+- **Desativar um acesso** corta a pessoa do app e bloqueia o login no servidor.
+- Cada aparelho guarda **um perfil por vez**. Para trocar de app com outra conta, saia primeiro.
+
+### O que cada parte faz
+
+| Arquivo | Função |
+| --- | --- |
+| `firebase-config.js` | Chaves do seu projeto (podem ficar públicas) |
+| `cloud.js` | Liga o app ao Firebase: login, sincronização e notificações |
+| `firestore.rules` | Quem lê e grava o quê (pais só veem a própria família, tias e gestão conforme o perfil) |
+| `functions/index.js` | Cria acessos, redefine senhas, desativa contas e envia o push |
+| `firebase-messaging-sw.js` | Mostra a notificação com o app fechado |
+| `manifest.webmanifest` | Permite instalar o site na tela inicial |
+
+### Limites desta versão
+
+- **Notificação no iPhone** só funciona depois de **adicionar o site à tela inicial** (Compartilhar > Adicionar à Tela de Início) e abrir por esse ícone.
+- A **lotação das salas** que pais e visitantes veem é atualizada quando alguém da equipe está com o app aberto. A trava de sala lotada é feita no aparelho, não no servidor.
+- O **relatório de domingos anteriores** ainda usa números de exemplo. Os dados de hoje são reais.
+- Qualquer pessoa conectada consegue **escrever** no registro de ações, mas só o administrador lê. Cadastros feitos pelo QR Code de visitante são abertos por natureza: confira as famílias novas na Gestão.
+- Nada foi testado com o seu projeto real. Se algo recusar gravar, a tela avisa e o console do navegador mostra o motivo.
+
+*Aprender. Adorar. Crescer com Jesus.*
