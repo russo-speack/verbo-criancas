@@ -85,12 +85,36 @@ Tudo funciona no plano **Spark (gratuito)**, sem cartão. Sem configuração, o 
 | `firebase-config.js` | Chaves do seu projeto (podem ficar públicas) |
 | `cloud.js` | Liga o app ao Firebase: login, sincronização e avisos |
 | `firestore.rules` | Quem lê e grava o quê (pais só veem a própria família, tias e gestão conforme o perfil) |
-| `sw.js` | Mostra o aviso como notificação do aparelho |
+| `sw.js` | Recebe o aviso (mesmo com o app fechado) e mostra como notificação |
+| `worker/push-worker.js` | Servidor de avisos no Cloudflare Workers (opcional, grátis) |
+| `chaves.html` | Gera as chaves do servidor de avisos |
 | `manifest.webmanifest` | Permite instalar o site na tela inicial |
+
+### Avisos com o app fechado (grátis, no Cloudflare)
+
+O navegador entrega notificações com o app fechado pelo padrão **Web Push**. Falta só um servidorzinho para disparar o aviso quando a tia o envia. Ele roda no **Cloudflare Workers**, plano gratuito (100 mil pedidos por dia, sem cartão). O código está em `worker/push-worker.js`. Tudo se faz pelo navegador, sem instalar nada.
+
+1. **Chaves:** com o site publicado, abra `.../chaves.html`, clique em **Gerar chaves** e deixe a página aberta (ou copie as duas chaves para um lugar seguro). A pública não é segredo. A **privada é segredo**: não coloque no GitHub.
+2. **Conta:** crie uma conta grátis em dash.cloudflare.com.
+3. **Worker:** em *Workers & Pages > Create > Create Worker*, dê o nome `verbo-push` e clique em **Deploy**. Depois clique em **Edit code**, apague o código de exemplo, cole o conteúdo de `worker/push-worker.js` e clique em **Deploy**.
+4. **Variáveis:** em *Settings > Variables and Secrets*, adicione:
+   - `PROJECT_ID` (texto): o `projectId` do Firebase
+   - `VAPID_PUBLIC` (texto): a chave pública do passo 1
+   - `VAPID_PRIVATE` (**Secret**): a chave privada do passo 1
+   - `VAPID_SUBJECT` (texto): `mailto:` seguido do seu e-mail
+   - `ALLOWED_ORIGIN` (texto): `https://russo-speack.github.io`
+
+   Clique em **Deploy** de novo.
+5. **Endereço do Worker:** copie o endereço do Worker (algo como `https://verbo-push.SEU-USUARIO.workers.dev`).
+6. **Configuração do app:** em `firebase-config.js`, preencha `vapidPublicKey` (chave pública) e `pushUrl` (endereço do Worker) e faça o commit.
+7. **Regras:** publique de novo o `firestore.rules` (há uma regra nova para os aparelhos inscritos).
+8. **Em cada celular de pais:** *Perfil > Ativar avisos neste aparelho*.
+
+Como funciona: o aparelho dos pais se inscreve e guarda a inscrição no Firestore. Quando a tia envia um aviso, o app dela envia a inscrição da família ao Worker junto com o login dela. O Worker confere o login (só contas reais, nunca visitantes), criptografa a mensagem e entrega ao serviço de notificações do navegador, que acorda o celular. O Worker não guarda nada. No **iPhone**, precisa estar no iOS 16.4 ou mais novo e o site adicionado à tela inicial.
 
 ### Limites do plano gratuito
 
-- **Avisos:** a notificação aparece no aparelho **enquanto o app estiver aberto**, mesmo em segundo plano. Com o celular bloqueado ou o app fechado, o aviso só chega quando a pessoa abrir o app. Notificação de verdade com o celular bloqueado exige enviar por um servidor, que só existe no plano Blaze (pago por uso). Se um dia migrarem, é uma etapa a mais, sem refazer o resto.
+- **Avisos:** sem o passo "Avisos com o app fechado" (abaixo), a notificação aparece no aparelho só **enquanto o app estiver aberto**, mesmo em segundo plano. Com esse passo, ela chega também com o app fechado e o celular bloqueado. Visitantes (QR Code) recebem os avisos só dentro da página.
 - **Notificação no iPhone** só funciona depois de **adicionar o site à tela inicial** (Compartilhar > Adicionar à Tela de Início) e abrir por esse ícone.
 - A **lotação das salas** que pais e visitantes veem é atualizada quando alguém da equipe está com o app aberto. A trava de sala lotada é feita no aparelho, não no servidor.
 - O **relatório de domingos anteriores** ainda usa números de exemplo. Os dados de hoje são reais.

@@ -360,7 +360,7 @@ function cloudPerfil() {
   if (!cloudOn()) return '';
   const st = Cloud.pushState();
   const push = st === 'granted' ? '<p class="meta"><span class="chip ok">Ativadas neste aparelho</span></p>' : st === 'denied' ? '<p class="meta">As notificações estão bloqueadas neste aparelho. Libere nas configurações do navegador.</p>' : st === 'unsupported' ? '<p class="meta">Este navegador não mostra notificações. No iPhone, adicione o site à tela inicial e abra por lá.</p>' : '<button type="button" class="btn primary" data-pushon>Ativar avisos neste aparelho</button>';
-  return '<p class="sec">Avisos neste aparelho</p><div class="card"><p class="meta">Ative para os avisos da equipe aparecerem como notificação do aparelho. Eles chegam enquanto o app estiver aberto, mesmo em segundo plano.</p>' + push + '</div>' +
+  return '<p class="sec">Avisos neste aparelho</p><div class="card"><p class="meta">' + (Cloud.pushClosed() ? 'Ative para receber os avisos da equipe como notificação do aparelho, mesmo com o app fechado ou o celular bloqueado.' : 'Ative para os avisos da equipe aparecerem como notificação do aparelho. Eles chegam enquanto o app estiver aberto, mesmo em segundo plano.') + '</p>' + push + '</div>' +
     '<p class="sec">Trocar senha</p><form class="card form" id="pw" novalidate><label>Nova senha (mínimo 8 caracteres)<input type="password" id="pw-n" autocomplete="new-password"></label><button type="submit" class="btn">Trocar senha</button></form>';
 }
 
@@ -712,7 +712,8 @@ document.addEventListener('click', e => {
     const s = state.sheet, text = $('#msg').value.trim();
     if (!text) { toast('Escreva ou escolha uma mensagem antes de enviar.'); return; }
     const k = kid(s.kid);
-    state.alerts.push({ id: 'a' + uid8(), at: Date.now(), fam: k.fam, kid: k.id, text, time: now(), reply: false, seen: false, by: tia().name });
+    const al = { id: 'a' + uid8(), at: Date.now(), fam: k.fam, kid: k.id, text, time: now(), reply: false, seen: false, by: tia().name };
+    state.alerts.push(al); if (cloudOn()) Cloud.pushAlert(al);
     log(tia().name, 'Aviso enviado aos pais de ' + k.name + '.');
     state.sheet = null; render();
     toast('Notificação enviada aos responsáveis de ' + k.name.split(' ')[0]); return;

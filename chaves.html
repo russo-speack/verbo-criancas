@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chaves de aviso | Verbo Crianças</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 32px auto; padding: 0 16px; color: #1c2b3a; line-height: 1.5; }
+  h1 { color: #123b70; font-size: 22px; }
+  button { background: #123b70; color: #fff; border: 0; border-radius: 12px; padding: 12px 20px; font-size: 16px; min-height: 44px; }
+  textarea { width: 100%; box-sizing: border-box; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #c8d3df; border-radius: 8px; }
+  label { display: block; margin-top: 16px; font-weight: 700; }
+  .warn { background: #fff4d6; padding: 12px; border-radius: 12px; }
+</style>
+</head>
+<body>
+<h1>Gerar chaves de aviso</h1>
+<p>Estas chaves identificam o seu servidor de avisos. Gere uma vez, guarde com cuidado e use sempre as mesmas. Nada sai desta página: a geração acontece no seu navegador.</p>
+<button id="g" type="button">Gerar chaves</button>
+<div id="o" hidden>
+  <label for="pub">Chave pública (vai em <code>firebase-config.js</code> como <code>vapidPublicKey</code> e no Worker como <code>VAPID_PUBLIC</code>)</label>
+  <textarea id="pub" rows="3" readonly></textarea>
+  <label for="priv">Chave privada (só no Worker, como Secret <code>VAPID_PRIVATE</code>)</label>
+  <textarea id="priv" rows="2" readonly></textarea>
+  <p class="warn">Não publique a chave privada no GitHub nem mande por mensagem. Quem tiver essa chave pode enviar avisos em nome do seu app.</p>
+</div>
+<script>
+  const b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  document.getElementById('g').onclick = async () => {
+    const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']);
+    const jwk = await crypto.subtle.exportKey('jwk', k.privateKey);
+    const raw = await crypto.subtle.exportKey('raw', k.publicKey);
+    document.getElementById('pub').value = b64u(raw);
+    document.getElementById('priv').value = jwk.d;
+    document.getElementById('o').hidden = false;
+  };
+</script>
+</body>
+</html>

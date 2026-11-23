@@ -8,5 +8,8 @@ globalThis.VERBO_FIREBASE = {
   projectId: '',
   storageBucket: '',
   messagingSenderId: '',
-  appId: ''
+  appId: '',
+  // Avisos com o app fechado (opcional, grátis). Veja README, seção "Avisos com o app fechado".
+  vapidPublicKey: '',
+  pushUrl: ''
 };

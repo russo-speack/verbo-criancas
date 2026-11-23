@@ -179,6 +179,7 @@
     if (C.app === 'tias') { state.tia = p.tia; state.t = newT(); }
     if (C.app === 'gestao') { state.g = 'painel'; state.gform = false; state.eform = false; state.aform = false; state.gq = ''; state.notice = null; }
     listen(p);
+    if (p.role === 'pais' && window.Notification && Notification.permission === 'granted') subscribePush().catch(() => {});
     render();
   }
 
@@ -340,13 +341,42 @@
       else new Notification('Verbo Crianças', { body });
     } catch (e) { /* sem permissão ou sem suporte */ }
   }
+  const b64uToBytes = x => { x = x.replace(/-/g, '+').replace(/_/g, '/'); while (x.length % 4) x += '='; return Uint8Array.from(atob(x), c => c.charCodeAt(0)); };
+  const sha = async t => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t))), b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  const pushReady = () => !!(cfg.vapidPublicKey && cfg.pushUrl && 'serviceWorker' in navigator && 'PushManager' in window);
+
+  // inscreve este aparelho para receber avisos mesmo com o app fechado
+  async function subscribePush() {
+    if (!pushReady() || !C.profile || C.profile.role !== 'pais') return false;
+    const reg = await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready; swReg = reg;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(cfg.vapidPublicKey) });
+    await db.collection('pushsubs').doc(await sha(sub.endpoint)).set({ fam: C.profile.fam, owner: C.profile.id, sub: JSON.stringify(sub.toJSON()), at: Date.now() });
+    return true;
+  }
+
   C.enablePush = async function () {
     if (!window.Notification) return { err: 'Este navegador não mostra notificações. No iPhone, adicione o site à tela inicial e abra por lá.' };
     const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if (perm !== 'granted') return { err: 'As notificações foram bloqueadas neste aparelho. Libere nas configurações do navegador.' };
-    await showNative('Pronto! Os avisos da equipe vão aparecer assim.');
-    return { ok: true };
+    let closed = false;
+    try { closed = await subscribePush(); } catch (e) { console.warn('push', e); }
+    await showNative(closed ? 'Pronto! Os avisos da equipe vão chegar assim, até com o app fechado.' : 'Pronto! Os avisos da equipe vão aparecer assim enquanto o app estiver aberto.');
+    return { ok: true, closed };
+  };
+
+  // a tia (ou a gestão) pede ao servidor de avisos para notificar a família
+  C.pushAlert = async function (alert) {
+    if (!cfg.pushUrl || !auth.currentUser || !alert || !alert.fam) return;
+    try {
+      const snap = await db.collection('pushsubs').where('fam', '==', alert.fam).get();
+      if (snap.empty) return;
+      const items = snap.docs.map(d => ({ id: d.id, sub: JSON.parse(d.data().sub) }));
+      const r = await fetch(cfg.pushUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await auth.currentUser.getIdToken() }, body: JSON.stringify({ subs: items.map(x => x.sub), title: 'Verbo Crianças', body: alert.text, url: './#pais' }) });
+      const out = await r.json();
+      (out.dead || []).forEach(ep => { const it = items.find(x => x.sub.endpoint === ep); if (it) db.collection('pushsubs').doc(it.id).delete().catch(() => {}); });
+    } catch (e) { console.warn('Aviso por push não enviado', e); }
   };
   C.pushState = () => (window.Notification ? Notification.permission : 'unsupported');
+  C.pushClosed = () => pushReady();
   C.notify = showNative;
 })();

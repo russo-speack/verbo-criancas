@@ -88,6 +88,14 @@ service cloud.firestore {
             && changed().hasOnly(['seen', 'reply']));
     }
 
+    // ---- aparelhos dos pais inscritos nos avisos ----
+    match /pushsubs/{id} {
+      allow read: if isStaff() || isTia();
+      allow create: if isPais() && request.resource.data.owner == request.auth.uid && request.resource.data.fam == myFam();
+      allow update: if isPais() && resource.data.owner == request.auth.uid && request.resource.data.owner == request.auth.uid && request.resource.data.fam == myFam();
+      allow delete: if isStaff() || isTia() || (isPais() && resource.data.owner == request.auth.uid);
+    }
+
     // ---- registro de ações: qualquer pessoa conectada escreve, só o administrador lê ----
     match /audit/{id} {
       allow read: if isAdmin();
