@@ -8,7 +8,7 @@ São **três apps**, cada um na sua própria página, com a identidade visual do
 | `gestao.html` | **Gestão**: painel, famílias, equipe, agenda, relatórios, acessos e registro | Recepção, coordenação e administrador. Login próprio, só com e-mail e senha. |
 | `visitante.html` | **Check-in de visitante** | Quem lê o QR Code na entrada. Abre direto, sem login e sem baixar nada. |
 
-- **Famílias:** check-in dos filhos, avisos da equipe por notificação, agenda e cartas de histórias.
+- **Famílias:** check-in dos filhos, avisos da equipe por notificação e agenda.
 - **Tias:** sala, check-in e check-out, cuidados da criança e envio de avisos. A aba **Visitantes** mostra o **QR Code** para exibir ou imprimir na entrada.
 - **Gestão:** o administrador também vê o QR Code, para imprimir.
 - Quem entra no endereço errado não passa: uma conta da Gestão não abre o app das famílias, e uma conta de família não abre a Gestão.

@@ -48,14 +48,14 @@ const FAMS = [
   { id: 'lima', name: 'Lima', phone: '(00) 90000-0005', guardians: ['Bruno Lima (pai)', 'Sônia Lima (avó)'] }
 ];
 const KIDS = [
-  { id: 'k1', name: 'Davi Souza', age: '4 anos', room: 'maternal', fam: 'souza', note: '', obs: '', status: 'in', time: '09:02', out: '', by: 'Maria Souza', code: 'DAVI-4821', cards: ['noe', 'pes'], packs: 1, packWeek: true },
-  { id: 'k2', name: 'Lívia Souza', age: '1 ano', room: 'bercario', fam: 'souza', note: 'Alergia a leite de vaca e derivados', obs: 'Dorme com a chupeta', status: 'in', time: '09:02', out: '', by: 'Maria Souza', code: 'LIVI-1937', cards: ['ovelha'], packs: 0, packWeek: true },
-  { id: 'k3', name: 'Pedro Almeida', age: '6 anos', room: 'juniores', fam: 'almeida', note: '', obs: '', status: 'in', time: '09:05', out: '', by: 'Carla Almeida', code: 'PEDR-7710', cards: ['daniel', 'ester', 'zaqueu'], packs: 0, packWeek: true },
-  { id: 'k4', name: 'Sofia Ferreira', age: '9 anos', room: 'kids', fam: 'ferreira', note: '', obs: '', status: 'in', time: '09:08', out: '', by: 'Rafael Ferreira', code: 'SOFI-3302', cards: ['miria'], packs: 0, packWeek: true },
-  { id: 'k5', name: 'Miguel Ferreira', age: '6 anos', room: 'juniores', fam: 'ferreira', note: 'Alergia a amendoim', obs: '', status: 'in', time: '09:08', out: '', by: 'Rafael Ferreira', code: 'MIGU-5568', cards: [], packs: 0, packWeek: true },
-  { id: 'k6', name: 'Helena Costa', age: '3 anos', room: 'maternal', fam: 'costa', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: 'HELE-2094', cards: [], packs: 0, packWeek: false },
-  { id: 'k7', name: 'Théo Lima', age: '2 anos', room: 'bercario', fam: 'lima', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: 'THEO-6641', cards: ['salomao'], packs: 0, packWeek: false },
-  { id: 'k8', name: 'Arthur Lima', age: '8 anos', room: 'kids', fam: 'lima', note: '', obs: '', status: 'left', time: '09:10', out: '10:12', by: 'Bruno Lima', code: 'ARTH-9150', cards: ['josue', 'paulo'], packs: 0, packWeek: true }
+  { id: 'k1', name: 'Davi Souza', age: '4 anos', room: 'maternal', fam: 'souza', note: '', obs: '', status: 'in', time: '09:02', out: '', by: 'Maria Souza', code: 'DAVI-4821' },
+  { id: 'k2', name: 'Lívia Souza', age: '1 ano', room: 'bercario', fam: 'souza', note: 'Alergia a leite de vaca e derivados', obs: 'Dorme com a chupeta', status: 'in', time: '09:02', out: '', by: 'Maria Souza', code: 'LIVI-1937' },
+  { id: 'k3', name: 'Pedro Almeida', age: '6 anos', room: 'juniores', fam: 'almeida', note: '', obs: '', status: 'in', time: '09:05', out: '', by: 'Carla Almeida', code: 'PEDR-7710' },
+  { id: 'k4', name: 'Sofia Ferreira', age: '9 anos', room: 'kids', fam: 'ferreira', note: '', obs: '', status: 'in', time: '09:08', out: '', by: 'Rafael Ferreira', code: 'SOFI-3302' },
+  { id: 'k5', name: 'Miguel Ferreira', age: '6 anos', room: 'juniores', fam: 'ferreira', note: 'Alergia a amendoim', obs: '', status: 'in', time: '09:08', out: '', by: 'Rafael Ferreira', code: 'MIGU-5568' },
+  { id: 'k6', name: 'Helena Costa', age: '3 anos', room: 'maternal', fam: 'costa', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: 'HELE-2094' },
+  { id: 'k7', name: 'Théo Lima', age: '2 anos', room: 'bercario', fam: 'lima', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: 'THEO-6641' },
+  { id: 'k8', name: 'Arthur Lima', age: '8 anos', room: 'kids', fam: 'lima', note: '', obs: '', status: 'left', time: '09:10', out: '10:12', by: 'Bruno Lima', code: 'ARTH-9150' }
 ];
 const EVENTS = [
   { day: '08', mon: 'nov', w: 'Domingo', t: '9h', n: 'Culto infantil', note: 'Check-in a partir das 8h30.' },
@@ -68,21 +68,6 @@ const PAST = [
   { d: '25/10', c: 38, v: 2, avg: '1h 48min' }, { d: '18/10', c: 44, v: 5, avg: '1h 55min' },
   { d: '11/10', c: 36, v: 1, avg: '1h 42min' }, { d: '04/10', c: 41, v: 3, avg: '1h 50min' }
 ];
-const THEMES = ['Heróis da fé', 'Histórias de Jesus', 'Louvor e coragem'];
-const CARDS = [
-  { id: 'davi', theme: 0, name: 'Davi', color: '#35b8e8', story: 'Davi era um jovem pastor. Quando o gigante Golias desafiou o povo de Deus, todos ficaram com medo. Davi confiou em Deus e enfrentou o gigante com uma funda e uma pedra. Deus ajuda quem confia nele.' },
-  { id: 'daniel', theme: 0, name: 'Daniel', color: '#9b59d0', story: 'Daniel orava a Deus todos os dias, mesmo quando uma lei proibiu. Ele foi colocado numa cova de leões, mas Deus fechou a boca dos leões e protegeu o seu amigo.' },
-  { id: 'ester', theme: 0, name: 'Ester', color: '#ff5364', story: 'Ester era rainha e soube que seu povo corria perigo. Com muita coragem, foi falar com o rei e pedir ajuda. A coragem dela salvou muita gente.' },
-  { id: 'noe', theme: 0, name: 'Noé', color: '#78c943', story: 'Noé construiu uma arca enorme porque Deus pediu. Cuidou dos animais e da família durante a chuva. Depois, Deus colocou um arco-íris no céu como sinal de promessa.' },
-  { id: 'pes', theme: 1, name: 'Pães e peixes', color: '#ffc928', story: 'Um menino repartiu cinco pães e dois peixinhos. Jesus agradeceu a Deus e dividiu a comida, e todo mundo comeu até ficar satisfeito. Quando compartilhamos, Deus faz o pouco render.' },
-  { id: 'samaritano', theme: 1, name: 'Bom samaritano', color: '#35b8e8', story: 'Um homem foi ferido na estrada. Dois passaram direto, mas um samaritano parou, cuidou dele e pagou a hospedagem. Jesus ensinou que amar é ajudar quem precisa.' },
-  { id: 'ovelha', theme: 1, name: 'Ovelha perdida', color: '#78c943', story: 'Um pastor tinha cem ovelhas e uma se perdeu. Ele deixou as outras em segurança e foi procurá-la até encontrar. Deus cuida de cada um de nós.' },
-  { id: 'zaqueu', theme: 1, name: 'Zaqueu', color: '#9b59d0', story: 'Zaqueu era baixinho e subiu numa árvore para ver Jesus passar. Jesus o chamou pelo nome e foi à casa dele. Zaqueu ficou tão feliz que decidiu ser generoso com todos.' },
-  { id: 'miria', theme: 2, name: 'Miriã', color: '#ff5364', story: 'Miriã cuidou do irmãozinho Moisés quando ele era bebê e estava escondido no rio. Anos depois, ela cantou e dançou para louvar a Deus pela libertação do povo.' },
-  { id: 'salomao', theme: 2, name: 'Salomão', color: '#ffc928', story: 'Salomão pediu a Deus sabedoria em vez de riquezas. Deus deu a sabedoria e ainda muito mais. Pedir ajuda a Deus é um ótimo começo.' },
-  { id: 'paulo', theme: 2, name: 'Paulo e Silas', color: '#35b8e8', story: 'Paulo e Silas foram presos, mas à meia-noite cantaram louvores. Houve um tremor e as portas se abriram. Louvar dá coragem até nos dias difíceis.' },
-  { id: 'josue', theme: 2, name: 'Josué', color: '#78c943', story: 'Deus pediu que Josué fosse forte e corajoso. Ele marchou com o povo ao redor de Jericó, e os muros da cidade caíram. Com Deus, ninguém caminha sozinho.' }
-];
 const QUICK = [
   { key: 'choro', label: 'Chorando', text: n => n + ' está chorando e não se acalma. Pode vir até a sala?' },
   { key: 'fralda', label: 'Trocar fralda', text: n => 'Precisamos trocar a fralda de ' + n + '. Pode vir até a sala?' },
@@ -90,7 +75,7 @@ const QUICK = [
   { key: 'colo', label: 'Quer o colo', text: n => n + ' quer ficar com você. Pode vir até a sala?' },
   { key: 'livre', label: 'Mensagem livre', text: n => '' }
 ];
-const newP = () => ({ tab: 'home', screen: null, sel: [], ckid: null, card: null, done: [], gained: 0 });
+const newP = () => ({ tab: 'home', screen: null, sel: [], ckid: null, card: null, done: [] });
 const newT = () => ({ tab: 'sala', screen: null, room: null, kid: null });
 const state = {
   fam: 'souza', sheet: null, visit: null, vn: 0, open: true, p: newP(), t: newT(), tia: 't2',
@@ -105,7 +90,6 @@ const now = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minu
 const kid = id => KIDS.find(k => k.id === id);
 const fam = id => FAMS.find(f => f.id === id);
 const room = id => ROOMS.find(r => r.id === id);
-const card = id => CARDS.find(c => c.id === id);
 const tia = () => TIAS.find(x => x.id === state.tia);
 const inRoom = id => (cloudOn() && Cloud.useCounts()) ? ((state.counts || {})[id] || 0) : KIDS.filter(k => k.room === id && k.status === 'in').length;
 const kidAlerts = id => state.alerts.filter(a => a.kid === id);
@@ -176,23 +160,12 @@ function qr(text) {
 }
 const visitorUrl = () => { try { return new URL('visitante.html', location.href).href; } catch (e) { return 'visitante.html'; } };
 
-function cardArt(c) {
-  const dots = [[16, 18], [84, 24], [80, 82], [18, 80]].map((p, i) => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (3 + i % 2) + '" fill="#fff" opacity=".7"/>').join('');
-  const nm = c.name.length > 14 ? c.name.slice(0, 13) + '…' : c.name;
-  return '<svg viewBox="0 0 100 130" role="img" aria-label="Carta ' + esc(c.name) + '"><rect width="100" height="130" rx="12" fill="' + c.color + '"/>' +
-    '<circle cx="50" cy="52" r="33" fill="#fff" opacity=".35"/><circle cx="50" cy="52" r="26" fill="#fff"/>' + dots +
-    '<text x="50" y="63" text-anchor="middle" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="32" fill="#123b70">' + esc(c.name.charAt(0)) + '</text>' +
-    '<path d="M0 96H100V118A12 12 0 0 1 88 130H12A12 12 0 0 1 0 118Z" fill="#123b70"/>' +
-    '<text x="50" y="117" text-anchor="middle" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="9.5" fill="#fff">' + esc(nm) + '</text></svg>';
-}
-
 const ico = d => '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
 const IC = {
   back: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
   home: ico('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>'),
   kid: ico('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>'),
   cal: ico('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
-  cards: ico('<rect x="7" y="3" width="13" height="17" rx="2"/><path d="M4 7v12a2 2 0 002 2h10"/>'),
   bell: ico('<path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/><path d="M10 21h4"/>'),
   door: ico('<path d="M5 21V4h10v17"/><path d="M3 21h14"/><circle cx="12" cy="13" r=".8"/>'),
   out: ico('<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>'),
@@ -205,8 +178,6 @@ const IC = {
 
 function doCheckIn(k, by) {
   k.status = 'in'; k.time = now(); k.out = ''; k.by = by;
-  if (!k.visitor && !k.packWeek) { k.packWeek = true; k.packs = (k.packs || 0) + 1; return true; }
-  return false;
 }
 
 function statusChip(k) {
@@ -257,21 +228,14 @@ function appLogin(app) {
 }
 
 /* ================= APP DOS PAIS ================= */
-function packBanner(mine, label) {
-  const packs = mine.reduce((n, k) => n + (k.packs || 0), 0);
-  return packs ? '<div class="packbox"><div><strong>Você tem ' + packs + (packs > 1 ? ' pacotes' : ' pacote') + ' para abrir</strong><span>Descubra uma nova história.</span></div><button type="button" class="btn hl" data-tab="conteudos">' + label + '</button></div>' : '';
-}
-
 function tabHome(f, mine) {
   const ids = mine.map(k => k.id), ev = EVENTS[0];
   const last = state.alerts.filter(a => ids.includes(a.kid)).slice(-1)[0];
   return '<div><h2>Olá! Que bom ter vocês aqui.</h2><p class="sub">Acompanhe a jornada da sua criança.</p></div>' +
     '<div class="tiles"><button type="button" class="tile blue" data-tab="crianca"><strong>Minha criança</strong><span>Acessar</span></button>' +
-    '<button type="button" class="tile yel" data-tab="agenda"><strong>Agenda</strong><span>Acessar</span></button>' +
-    '<button type="button" class="tile grn" data-tab="conteudos"><strong>Conteúdos</strong><span>Acessar</span></button></div>' +
+    '<button type="button" class="tile yel" data-tab="agenda"><strong>Agenda</strong><span>Acessar</span></button></div>' +
     '<section class="card"><p class="sec">Próximo encontro</p>' + (ev ? '<strong>' + esc(ev.n) + '</strong><span class="meta">' + ev.w + ', ' + ev.day + '/' + (MONTHS.indexOf(ev.mon) + 1) + ' · ' + esc(ev.t) + '</span>' : '<strong>Em breve</strong><span class="meta">A coordenação ainda não publicou o próximo encontro.</span>') + '<span><span class="chip' + (state.open ? ' ok' : ' sun') + '">' + (state.open ? 'Check-in aberto' : 'Check-in começa às 8h30') + '</span></span></section>' +
-    '<section class="card"><p class="sec">Aviso recente</p>' + (last ? '<span class="time">' + last.time + ' · ' + esc(kid(last.kid).name) + '</span><span>' + esc(last.text) + '</span><button type="button" class="btn" data-tab="avisos">Ver avisos</button>' : '<span class="hint">Ainda não há avisos para esta turma.</span>') + '</section>' +
-    packBanner(mine, 'Ver conteúdos');
+    '<section class="card"><p class="sec">Aviso recente</p>' + (last ? '<span class="time">' + last.time + ' · ' + esc(kid(last.kid).name) + '</span><span>' + esc(last.text) + '</span><button type="button" class="btn" data-tab="avisos">Ver avisos</button>' : '<span class="hint">Ainda não há avisos para esta turma.</span>') + '</section>';
 }
 
 function tabCrianca(f, mine) {
@@ -308,25 +272,10 @@ function tabAvisos(mine) {
   return '<h2>Avisos</h2>' + (notes.length ? notes.map(a => alertCard(a, true)).join('') : '<p class="hint">Ainda não há avisos para esta turma.</p>');
 }
 
-function tabConteudos(mine) {
-  const p = state.p, k = kid(p.ckid && mine.some(x => x.id === p.ckid) ? p.ckid : mine[0].id);
-  const pills = mine.length > 1 ? '<div class="pills" role="group" aria-label="Escolher criança">' + mine.map(x => '<button type="button" data-ckid="' + x.id + '" aria-pressed="' + (x.id === k.id) + '">' + esc(x.name.split(' ')[0]) + '</button>').join('') + '</div>' : '';
-  const pct = Math.round(k.cards.length / CARDS.length * 100);
-  const banner = k.packs > 0
-    ? '<div class="packbox"><div><strong>Pacote para abrir!</strong><span>Toque para descobrir uma história.</span></div><button type="button" class="btn hl" data-openpack="' + k.id + '">Abrir pacote</button></div>'
-    : '<p class="hint">Cada criança ganha 1 pacote por semana ao fazer check-in.</p>';
-  const grids = THEMES.map((t, i) => '<h3>' + t + '</h3><div class="grid4">' + CARDS.filter(c => c.theme === i).map(c => k.cards.includes(c.id)
-    ? '<button type="button" class="gc" data-story="' + c.id + '" aria-label="Abrir história de ' + esc(c.name) + '">' + cardArt(c) + '</button>'
-    : '<div class="gc locked"><div class="lk" aria-hidden="true">?</div><span>Bloqueada</span></div>').join('') + '</div>').join('');
-  return '<div><h2>Conteúdos</h2><p class="sub">Histórias bíblicas de ' + esc(k.name.split(' ')[0]) + ' · ' + k.cards.length + ' de ' + CARDS.length + ' cartas</p></div>' + pills +
-    '<div class="prog" role="progressbar" aria-label="Cartas da coleção" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' + banner + grids;
-}
-
 function screenDone() {
   const p = state.p, names = p.done.map(id => esc(kid(id).name.split(' ')[0]));
   const list = names.length > 1 ? names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1] : names[0];
   return '<div class="hero">' + IC.check + '<h2>Check-in feito!</h2><p>' + list + (names.length > 1 ? ' já estão' : ' já está') + ' na sala. Fique tranquilo: se precisarmos de você, a equipe avisa por notificação aqui no app.</p></div>' +
-    (p.gained ? '<div class="packbox"><div><strong>Você ganhou ' + p.gained + (p.gained > 1 ? ' pacotes' : ' pacote') + ' de cartas</strong><span>Vale 1 por criança a cada semana.</span></div><button type="button" class="btn hl" data-tab="conteudos">Abrir agora</button></div>' : '') +
     '<button type="button" class="btn wide" data-back>Voltar ao início</button>';
 }
 
@@ -339,18 +288,6 @@ function screenDetail(k, staff) {
       '<div class="full"><small>Identificação da criança</small><strong>#' + esc(k.code) + '</strong></div></div>' : '') +
     (!staff && k.status === 'in' ? '<div class="pkid"><div><strong>QR Code de retirada</strong><p class="meta" style="margin:4px 0 0">Mostre à equipe na saída.</p></div>' + qr(k.code) + '</div>' : '') +
     (staff && k.status === 'in' ? '<div class="actions"><button type="button" class="btn hl" data-alert="' + k.id + '">Avisar pais</button><button type="button" class="btn" data-out="' + k.id + '">Check-out</button></div>' : '');
-}
-
-function screenPack() {
-  const c = card(state.p.card);
-  return '<div class="bigcard">' + cardArt(c) + '</div>' +
-    '<div class="hero" style="padding-top:4px"><h2>' + esc(c.name) + '</h2><p>' + THEMES[c.theme] + '</p></div>' +
-    '<button type="button" class="btn primary wide" data-story="' + c.id + '">Ler a história</button>';
-}
-
-function screenStory() {
-  const c = card(state.p.card);
-  return '<div class="bigcard" style="width:140px">' + cardArt(c) + '</div><p class="story">' + esc(c.story) + '</p>';
 }
 
 function cloudPerfil() {
@@ -385,15 +322,13 @@ function renderParent(me) {
   let head, body, tabbar = false;
   if (p.screen === 'done') { head = bandLogo(); body = screenDone(); }
   else if (p.screen === 'detail') { const k = kid(p.card); head = bandBack(esc(k.name), k.age + ' · ' + room(k.room).name); body = screenDetail(k, false); }
-  else if (p.screen === 'pack') { head = bandBack('Nova carta!', ''); body = screenPack(); }
-  else if (p.screen === 'story') { const c = card(p.card); head = bandBack(esc(c.name), THEMES[c.theme]); body = screenStory(); }
   else if (p.screen === 'perfil') { head = bandBack('Perfil', 'Família ' + esc(f.name)); body = screenPerfil(f); }
   else {
     tabbar = true; head = bandLogo();
-    body = p.tab === 'crianca' ? tabCrianca(f, mine) : p.tab === 'agenda' ? tabAgenda() : p.tab === 'conteudos' ? tabConteudos(mine) : p.tab === 'avisos' ? tabAvisos(mine) : tabHome(f, mine);
+    body = p.tab === 'crianca' ? tabCrianca(f, mine) : p.tab === 'agenda' ? tabAgenda() : p.tab === 'avisos' ? tabAvisos(mine) : tabHome(f, mine);
   }
   const tb = tabbar ? '<nav class="tabbar" aria-label="Menu do app">' +
-    [['home', 'Início', IC.home], ['crianca', 'Minha criança', IC.kid], ['agenda', 'Agenda', IC.cal], ['conteudos', 'Conteúdos', IC.cards], ['avisos', 'Avisos', IC.bell]].map(t =>
+    [['home', 'Início', IC.home], ['crianca', 'Minha criança', IC.kid], ['agenda', 'Agenda', IC.cal], ['avisos', 'Avisos', IC.bell]].map(t =>
       '<button type="button" data-tab="' + t[0] + '"' + (p.tab === t[0] ? ' aria-current="page"' : '') + '>' + t[2] + t[1] + (t[0] === 'avisos' && unread ? '<span class="badge" aria-label="' + unread + ' não respondidos">' + unread + '</span>' : '') + '</button>').join('') + '</nav>' : '';
   const push = unseen.length ? '<div class="push" role="alert"><small><span>Verbo Crianças</span><span>agora</span></small><p>' + esc(unseen[unseen.length - 1].text) + '</p><div class="actions"><button type="button" class="btn primary" data-pushopen>Abrir</button><button type="button" class="btn" data-pushclose>Fechar</button></div></div>' : '';
   return '<div class="app">' + head + '<div class="scr">' + push + body + '</div>' + tb + '</div>';
@@ -576,7 +511,7 @@ function submitVisitor() {
   const go = () => {
     const owner = cloudOn() ? Cloud.uid() : undefined, fid = 'v' + uid8();
     FAMS.push({ id: fid, name: g, visitor: true, owner, phone: p, guardians: [g + ' (responsável)'] });
-    const k = { id: 'kv' + uid8(), name: n, age: ageLabel(a), room: rid, fam: fid, owner, note, obs: '', status: 'in', time: now(), out: '', by: g, code: 'VIS-' + (1000 + Math.floor(Math.random() * 9000)), visitor: true, cards: [], packs: 0, packWeek: true };
+    const k = { id: 'kv' + uid8(), name: n, age: ageLabel(a), room: rid, fam: fid, owner, note, obs: '', status: 'in', time: now(), out: '', by: g, code: 'VIS-' + (1000 + Math.floor(Math.random() * 9000)), visitor: true };
     KIDS.push(k); state.visit = k.id; log('Visitante', 'Check-in de ' + n + ' (' + room(rid).name + ').'); render();
     toast('Check-in feito. A equipe já viu ' + n.split(' ')[0] + ' na lista.');
   };
@@ -669,25 +604,17 @@ document.addEventListener('click', e => {
   if ('save' in d) { toast('Cadastro atualizado.'); return; }
   if (d.detail) { p.screen = 'detail'; p.card = d.detail; return render(); }
   if (d.ckid) { p.ckid = d.ckid; return render(); }
-  if (d.story) { p.card = d.story; p.screen = 'story'; return render(); }
-  if (d.openpack) {
-    const k = kid(d.openpack); if (!k.packs) return;
-    const left = CARDS.filter(c => !k.cards.includes(c.id));
-    if (!left.length) { toast('Coleção completa! Parabéns.'); return; }
-    const c = left[Math.floor(Math.random() * left.length)];
-    k.packs -= 1; k.cards.push(c.id); p.ckid = k.id; p.card = c.id; p.screen = 'pack'; return render();
-  }
   if ('docheckin' in d) {
-    const f = fam(state.fam), ok = [], full = []; let gained = 0;
+    const f = fam(state.fam), ok = [], full = [];
     p.sel.forEach(id => {
       const k = kid(id);
       if (inRoom(k.room) >= room(k.room).cap) { full.push(k.name.split(' ')[0]); return; }
-      if (doCheckIn(k, f.guardians[0].split(' (')[0])) gained += 1;
+      doCheckIn(k, f.guardians[0].split(' (')[0]);
       log('Família ' + f.name, 'Check-in de ' + k.name + ' (' + room(k.room).name + ').');
       ok.push(k.id);
     });
     if (full.length) toast('Sala lotada para ' + full.join(', ') + '. Fale com a equipe na entrada.');
-    if (ok.length) { p.done = ok; p.gained = gained; p.sel = []; p.screen = 'done'; }
+    if (ok.length) { p.done = ok; p.sel = []; p.screen = 'done'; }
     return render();
   }
   if (d.ttab) { ts.tab = d.ttab; ts.screen = null; return render(); }
@@ -802,7 +729,7 @@ document.addEventListener('submit', e => {
       FAMS.push({ id: fid, name: s, phone: ph, guardians: [g + ' (responsável)'] });
       if (local) USERS.push({ id: 'u' + uid8(), role: 'pais', name: g, login: '', phone: ph, pass: pw, active: true, fam: fid });
       state.notice = { title: 'Acesso criado para a família ' + s, text: 'O responsável entra com o telefone ' + ph + ' e a senha provisória ' + pw + '. ' + (local ? 'No sistema real, ele recebe um convite e cria a própria senha.' : 'Anote agora: ela não aparece de novo. Ele pode trocar a senha em Perfil.') };
-      KIDS.push({ id: 'kf' + uid8(), name: n + ' ' + s, age: ageLabel(a), room: rid, fam: fid, note: o, obs: '', status: 'out', time: '', out: '', by: '', code: 'CAD-' + (1000 + Math.floor(Math.random() * 9000)), cards: [], packs: 0, packWeek: false });
+      KIDS.push({ id: 'kf' + uid8(), name: n + ' ' + s, age: ageLabel(a), room: rid, fam: fid, note: o, obs: '', status: 'out', time: '', out: '', by: '', code: 'CAD-' + (1000 + Math.floor(Math.random() * 9000)) });
       log(actor(), 'Cadastro da família ' + s + ' (' + n + ', ' + room(rid).name + ').');
       state.gform = false; render();
     };

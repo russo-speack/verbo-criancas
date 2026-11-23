@@ -72,7 +72,7 @@ service cloud.firestore {
         || (signedIn() && request.resource.data.visitor == true && request.resource.data.owner == request.auth.uid && request.resource.data.status == 'in');
       allow update: if isStaff() || isTia()
         || (isPais() && resource.data.fam == myFam() && request.resource.data.fam == resource.data.fam
-            && changed().hasOnly(['status', 'time', 'out', 'by', 'packs', 'packWeek', 'cards']));
+            && changed().hasOnly(['status', 'time', 'out', 'by']));
     }
 
     match /alerts/{id} {
