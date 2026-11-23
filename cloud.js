@@ -6,6 +6,7 @@
    pelas regras em firestore.rules, não por este arquivo. */
 (function () {
   const cfg = window.VERBO_FIREBASE || {};
+  const MODE = window.VERBO_APP || 'familia';
   const C = window.Cloud = { enabled: !!(cfg.apiKey && cfg.projectId), ready: false, profile: null, anon: false, needsSetup: false, app: null };
   if (!C.enabled) return;
 
@@ -189,11 +190,14 @@
     auth.onAuthStateChanged(async u => {
       if (loggingIn) return;
       if (!u) { resetLocal(); C.anon = false; watchPublic(); render(); return; }
-      if (u.isAnonymous) { C.anon = true; C.profile = null; listenAnon(u); render(); return; }
+      if (u.isAnonymous || MODE === 'visitante') { C.anon = true; C.profile = null; listenAnon(u); render(); return; }
       let snap = null;
       try { snap = await db.collection('users').doc(u.uid).get(); } catch (e) { snap = null; }
       if (!snap || !snap.exists || snap.data().active === false) { await auth.signOut(); return; }
-      adopt(Object.assign({}, snap.data(), { id: u.uid }));
+      const prof = Object.assign({}, snap.data(), { id: u.uid });
+      // a sessão de outro app neste aparelho não abre este app
+      if (!appRoles(MODE === 'gestao' ? 'gestao' : 'familia').includes(prof.role)) { resetLocal(); C.anon = false; watchPublic(); render(); return; }
+      adopt(prof);
     });
     C.ready = true; readyResolve();
   }
@@ -202,7 +206,7 @@
     [USERS, FAMS, KIDS, TIAS, EVENTS, state.alerts, state.audit].forEach(a => a.splice(0, a.length));
     loadScripts(['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'])
       .then(init)
-      .catch(e => { state.lerr.pais = state.lerr.tias = state.lerr.gestao = e.message; render(); });
+      .catch(e => { state.lerr.familia = state.lerr.gestao = e.message; render(); });
   };
 
   /* ---------- ações chamadas pelo app ---------- */
@@ -337,7 +341,7 @@
     try {
       if (!window.Notification || Notification.permission !== 'granted') return;
       if (!swReg && 'serviceWorker' in navigator) swReg = await navigator.serviceWorker.register('sw.js');
-      if (swReg) await swReg.showNotification('Verbo Crianças', { body, icon: 'favicon.svg', tag: 'verbo-aviso', data: { url: './#pais' } });
+      if (swReg) await swReg.showNotification('Verbo Crianças', { body, icon: 'favicon.svg', tag: 'verbo-aviso', data: { url: './' } });
       else new Notification('Verbo Crianças', { body });
     } catch (e) { /* sem permissão ou sem suporte */ }
   }
@@ -371,7 +375,7 @@
       const snap = await db.collection('pushsubs').where('fam', '==', alert.fam).get();
       if (snap.empty) return;
       const items = snap.docs.map(d => ({ id: d.id, sub: JSON.parse(d.data().sub) }));
-      const r = await fetch(cfg.pushUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await auth.currentUser.getIdToken() }, body: JSON.stringify({ subs: items.map(x => x.sub), title: 'Verbo Crianças', body: alert.text, url: './#pais' }) });
+      const r = await fetch(cfg.pushUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await auth.currentUser.getIdToken() }, body: JSON.stringify({ subs: items.map(x => x.sub), title: 'Verbo Crianças', body: alert.text, url: './' }) });
       const out = await r.json();
       (out.dead || []).forEach(ep => { const it = items.find(x => x.sub.endpoint === ep); if (it) db.collection('pushsubs').doc(it.id).delete().catch(() => {}); });
     } catch (e) { console.warn('Aviso por push não enviado', e); }

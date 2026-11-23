@@ -1,31 +1,35 @@
 # Verbo Crianças: protótipo dos apps
 
-Protótipo navegável do Verbo Crianças, com a identidade visual do guia. Ele reúne em uma só página:
+São **três apps**, cada um na sua própria página, com a identidade visual do guia:
 
-| Endereço | O que é |
-| --- | --- |
-| `#pais` | App dos pais (login por e-mail ou telefone): check-in dos filhos, avisos por notificação, agenda e cartas de histórias |
-| `#tias` | App das tias (login próprio): sala, check-in e check-out, cuidados da criança e envio de avisos |
-| `#gestao` | Gestão (login por perfil): painel, famílias, equipe, agenda, relatórios, acessos e registro |
-| `#visitante` | Página aberta pelo QR Code da entrada, sem instalar nada |
+| Endereço | App | Quem usa |
+| --- | --- | --- |
+| `index.html` (endereço principal) | **Verbo Crianças**: app das famílias e da equipe de sala | Responsáveis e tias. O app identifica sozinho pelo login e abre a área certa. Não existe tela para escolher o perfil. |
+| `gestao.html` | **Gestão**: painel, famílias, equipe, agenda, relatórios, acessos e registro | Recepção, coordenação e administrador. Login próprio, só com e-mail e senha. |
+| `visitante.html` | **Check-in de visitante** | Quem lê o QR Code na entrada. Abre direto, sem login e sem baixar nada. |
 
-Os quatro conversam entre si dentro da mesma página. Por exemplo: a tia envia um aviso e ele aparece como notificação no app dos pais, e a gestão vê a ação no registro.
+- **Famílias:** check-in dos filhos, avisos da equipe por notificação, agenda e cartas de histórias.
+- **Tias:** sala, check-in e check-out, cuidados da criança e envio de avisos. A aba **Visitantes** mostra o **QR Code** para exibir ou imprimir na entrada.
+- **Gestão:** o administrador também vê o QR Code, para imprimir.
+- Quem entra no endereço errado não passa: uma conta da Gestão não abre o app das famílias, e uma conta de família não abre a Gestão.
 
-## Modo protótipo (sem Firebase): login por app
+No protótipo, os apps conversam entre si na mesma aba do navegador. Com o Firebase, passam a conversar entre aparelhos.
 
-Cada app pede o seu próprio login. Uma conta de pais não entra no app das tias, e assim por diante. A tela mostra as contas de exemplo, com o botão **Preencher**.
+## Modo protótipo (sem Firebase): contas de exemplo
+
+A tela de login de cada app mostra as contas de exemplo, com o botão **Preencher**.
 
 | App | Perfil | Entrada | Senha |
 | --- | --- | --- | --- |
-| Pais | Maria Souza | maria@email.example | souza123 |
-| Pais | Carla Almeida | carla@email.example | almeida123 |
-| Tias | Tia Raquel | raquel@verbo.example | raquel123 |
-| Tias | Tia Joana | joana@verbo.example | joana123 |
+| Verbo Crianças | Responsável (Maria Souza) | maria@email.example | souza123 |
+| Verbo Crianças | Responsável (Carla Almeida) | carla@email.example | almeida123 |
+| Verbo Crianças | Tia Raquel | raquel@verbo.example | raquel123 |
+| Verbo Crianças | Tia Joana | joana@verbo.example | joana123 |
 | Gestão | Administrador | admin@verbo.example | admin123 |
 | Gestão | Coordenação | coord@verbo.example | coord123 |
 | Gestão | Recepção | recepcao@verbo.example | recepcao123 |
 
-Há mais contas de exemplo na tela de cada app.
+Há mais contas de exemplo nas telas de login.
 
 **O que cada perfil da gestão vê:**
 
@@ -37,9 +41,10 @@ Ao cadastrar uma família, o sistema cria o acesso do responsável (entra com o 
 
 ## Arquivos
 
-- `index.html`: a página
+- `index.html`, `gestao.html`, `visitante.html`: as três páginas (um app cada)
 - `styles.css`: visual (cores, fontes, espaçamentos)
-- `app.js`: telas e comportamento
+- `app.js`: telas e comportamento dos três apps
+- `qrcode.js`: desenha o QR Code do visitante
 - `favicon.svg`: ícone da aba
 - `cloud.js`, `firebase-config.js`, `sw.js`, `manifest.webmanifest`, `firestore.rules` e `firebase.json`: ligação com o Firebase (veja abaixo)
 
@@ -51,7 +56,7 @@ Mantenha tudo na mesma pasta, como está.
 2. Na página do repositório, clique em **Add file > Upload files**, arraste os arquivos desta pasta e clique em **Commit changes**.
 3. Vá em **Settings > Pages**. Em **Build and deployment**, escolha **Deploy from a branch**, branch **main** e pasta **/ (root)**, e salve.
 4. Depois de um ou dois minutos, o endereço aparece nessa mesma tela, no formato `https://SEU-USUARIO.github.io/verbo-criancas/`.
-5. Para abrir direto em cada app, acrescente ao endereço `#pais`, `#tias`, `#gestao` ou `#visitante`.
+5. Os endereços dos apps ficam assim: `.../` (famílias e tias), `.../gestao.html` (gestão) e `.../visitante.html` (visitante, é o que o QR Code abre).
 
 Para testar no celular, abra o endereço no navegador. A página pede internet apenas para carregar as fontes Nunito.
 
@@ -68,7 +73,7 @@ Tudo funciona no plano **Spark (gratuito)**, sem cartão. Sem configuração, o 
 5. **App web:** em *Project settings (engrenagem) > General > Your apps*, registre um app **Web** (ícone `</>`) e copie o `firebaseConfig`.
 6. **Configuração no código:** abra `firebase-config.js`, cole os valores e faça o commit.
 7. **Regras:** em *Firestore Database > Rules*, apague o que estiver lá, cole o conteúdo de `firestore.rules` e clique em **Publish**. Não precisa instalar nada no computador.
-8. **Primeiro administrador:** abra `.../#gestao`. Como ainda não existe ninguém, aparece o formulário **Primeiro acesso**. Crie o administrador logo, antes de divulgar o endereço. Depois disso, o formulário some. Tias e equipe são criadas em **Gestão > Acessos**, e os responsáveis em **Famílias**.
+8. **Primeiro administrador:** abra `.../gestao.html`. Como ainda não existe ninguém, aparece o formulário **Primeiro acesso**. Crie o administrador logo, antes de divulgar o endereço. Depois disso, o formulário some. Tias e equipe são criadas em **Gestão > Acessos**, e os responsáveis em **Famílias**.
 
 ### Como fica o login
 
