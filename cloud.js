@@ -62,8 +62,8 @@
     const keep = arr.filter(o => o.id && !(o.id in old) && !items.some(i => i.id === o.id));
     arr.splice(0, arr.length, ...items, ...keep);
     const seen = last[col] = {};
-    if (col === 'alerts' && loaded.alerts && (C.anon || (C.profile && C.profile.role === 'pais'))) {
-      items.filter(o => !(o.id in old) && !o.seen).forEach(o => C.notify(o.text));
+    if (col === 'alerts' && loaded.alerts && (C.anon || (C.profile && C.profile.fam))) {
+      items.filter(o => !(o.id in old) && !o.seen && (C.anon || o.fam === C.profile.fam)).forEach(o => C.notify(o.text));
     }
     items.forEach(o => { seen[o.id] = stable(ser(col, o)); });
     loaded[col] = true;
@@ -180,7 +180,8 @@
     if (C.app === 'tias') { state.tia = p.tia; state.t = newT(); }
     if (C.app === 'gestao') { state.g = 'painel'; state.gform = false; state.eform = false; state.aform = false; state.gq = ''; state.notice = null; }
     listen(p);
-    if (p.role === 'pais' && window.Notification && Notification.permission === 'granted') subscribePush().catch(() => {});
+    state.mode = 'equipe';
+    if (p.fam && window.Notification && Notification.permission === 'granted') subscribePush().catch(() => {});
     render();
   }
 
@@ -289,7 +290,7 @@
     catch (e) { throw new Error(e.code === 'auth/email-already-in-use' ? 'Já existe um acesso com este login.' : msg(e)); }
     const profile = { id: uid, role, name, login: role === 'pais' ? '' : email, phone: role === 'pais' ? String(d.phone).slice(0, 30) : '', active: true };
     if (role === 'pais') { profile.fam = String(d.fam); if (ver) profile.ver = ver; }
-    if (role === 'tia') profile.tia = String(d.tia);
+    if (role === 'tia') { profile.tia = String(d.tia); profile.fam = d.fam ? String(d.fam) : ''; }
     await db.collection('users').doc(uid).set(profile);
     return { uid, pass, profile };
   }
@@ -351,7 +352,7 @@
 
   // inscreve este aparelho para receber avisos mesmo com o app fechado
   async function subscribePush() {
-    if (!pushReady() || !C.profile || C.profile.role !== 'pais') return false;
+    if (!pushReady() || !C.profile || !C.profile.fam) return false;
     const reg = await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready; swReg = reg;
     const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(cfg.vapidPublicKey) });
     await db.collection('pushsubs').doc(await sha(sub.endpoint)).set({ fam: C.profile.fam, owner: C.profile.id, sub: JSON.stringify(sub.toJSON()), at: Date.now() });

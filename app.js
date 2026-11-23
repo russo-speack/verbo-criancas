@@ -28,7 +28,7 @@ const USERS = [
   { id: 'u5', role: 'pais', name: 'Bruno Lima', login: 'bruno@email.example', phone: '(00) 90000-0005', pass: 'lima123', active: true, fam: 'lima' },
   { id: 'u6', role: 'tia', name: 'Tia Raquel', login: 'raquel@verbo.example', pass: 'raquel123', active: true, tia: 't1' },
   { id: 'u7', role: 'tia', name: 'Tia Joana', login: 'joana@verbo.example', pass: 'joana123', active: true, tia: 't2' },
-  { id: 'u8', role: 'tia', name: 'Tio Mateus', login: 'mateus@verbo.example', pass: 'mateus123', active: true, tia: 't3' },
+  { id: 'u8', role: 'tia', name: 'Tio Mateus', login: 'mateus@verbo.example', pass: 'mateus123', active: true, tia: 't3', fam: 'ferreira' },
   { id: 'u9', role: 'tia', name: 'Tia Lia', login: 'lia@verbo.example', pass: 'lia123', active: true, tia: 't4' },
   { id: 'u10', role: 'admin', name: 'Paulo Mendes', login: 'admin@verbo.example', pass: 'admin123', active: true },
   { id: 'u11', role: 'coord', name: 'Débora Dias', login: 'coord@verbo.example', pass: 'coord123', active: true },
@@ -78,6 +78,7 @@ const QUICK = [
 const newP = () => ({ tab: 'home', screen: null, sel: [], ckid: null, card: null, done: [] });
 const newT = () => ({ tab: 'sala', screen: null, room: null, kid: null });
 const state = {
+  mode: 'equipe',
   fam: 'souza', sheet: null, visit: null, vn: 0, open: true, p: newP(), t: newT(), tia: 't2',
   g: 'painel', gq: '', gform: false, eform: false, alerts: [], audit: [],
   sess: { pais: null, tias: null, gestao: null }, lerr: { familia: null, gestao: null }, lval: { familia: '', gestao: '' },
@@ -130,7 +131,7 @@ function logout() {
   const u = USERS.find(x => x.id === (app === 'gestao' ? state.sess.gestao : (state.sess.pais || state.sess.tias)));
   state.sess = { pais: null, tias: null, gestao: null }; state.lerr[app] = null;
   if (u && !cloudOn()) log(u.name, 'Saiu do app.');
-  state.p = newP(); state.t = newT();
+  state.p = newP(); state.t = newT(); state.mode = 'equipe';
   if (app === 'gestao') { state.g = 'painel'; state.gform = false; state.eform = false; state.aform = false; state.gq = ''; state.notice = null; }
   if (cloudOn()) Cloud.logout();
   render(); toast('Você saiu da conta.');
@@ -197,7 +198,7 @@ function demoCard(app) {
   if (cloudOn()) return '';
   const list = USERS.filter(u => appRoles(app).includes(u.role));
   return '<section class="card"><p class="sec">Contas de exemplo</p>' + list.map(u =>
-    '<div class="demo"><div><strong>' + esc(u.name) + '</strong>' + ' <span class="chip">' + ROLES[u.role] + '</span>' +
+    '<div class="demo"><div><strong>' + esc(u.name) + '</strong>' + ' <span class="chip">' + ROLES[u.role] + (u.fam && u.role === 'tia' ? ' + família' : '') + '</span>' +
     '<div class="meta">' + esc(u.login || u.phone) + ' · senha ' + esc(u.pass) + (u.active ? '' : ' · desativada') + '</div></div>' +
     '<button type="button" class="link" data-fill="' + u.id + '">Preencher</button></div>').join('') +
     '<p class="hint">Protótipo com contas de exemplo. No sistema real, a senha é conferida no servidor e nunca aparece na tela.</p></section>';
@@ -382,10 +383,17 @@ function visitorsTab() {
     '<p class="sec">Como funciona</p><ol class="steps"><li>O visitante escaneia o QR Code com a câmera do celular.</li><li>Preenche o nome, a criança e a idade em um minuto.</li><li>A criança aparece na lista da sala certa, e a família recebe um QR Code de retirada.</li></ol>';
 }
 
+// quem é da equipe e também responsável por uma família troca de área sem sair da conta
+function withSwitch(html, u) {
+  if (!u || !u.fam || html.indexOf('class="tabbar"') < 0) return html;
+  const b = (m, l) => '<button type="button" data-mode="' + m + '" aria-pressed="' + (state.mode === m) + '">' + l + '</button>';
+  return html.replace('<div class="scr">', '<div class="modebar" role="group" aria-label="Trocar de área">' + b('equipe', 'Equipe') + b('familia', 'Minha família') + '</div><div class="scr">');
+}
+
 function renderFamilia() {
   const pu = sessUser('pais'), tu = pu ? null : sessUser('tias');
-  if (pu) return renderParent(pu);
-  if (tu) return renderTia(tu);
+  if (pu) return withSwitch(renderParent(pu), null);
+  if (tu) return withSwitch(tu.fam && state.mode === 'familia' ? renderParent(tu) : renderTia(tu), tu);
   return appLogin('familia');
 }
 
@@ -456,12 +464,14 @@ function noticeHtml() {
   return '<section class="panel notice" role="status"><div><strong>' + esc(n.title) + '</strong><p class="meta">' + esc(n.text) + '</p></div><button type="button" class="btn sm" data-ndismiss>Entendi</button></section>';
 }
 
+const famOpts = sel => FAMS.filter(f => !f.visitor).map(f => '<option value="' + f.id + '"' + (f.id === sel ? ' selected' : '') + '>Família ' + esc(f.name) + '</option>').join('');
+
 function gAcessos() {
   const me = sessUser('gestao'), f = state.af;
   const list = USERS.filter(u => !u.replaced).filter(u => f === 'todos' || (f === 'pais' && u.role === 'pais') || (f === 'tias' && u.role === 'tia') || (f === 'gestao' && STAFF_ROLES.includes(u.role)));
   const pills = [['todos', 'Todos'], ['pais', 'Pais'], ['tias', 'Tias'], ['gestao', 'Gestão']].map(x => '<button type="button" data-af="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>').join('');
-  const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
-  const rows = list.map(u => '<tr><td>' + esc(u.name) + '</td><td>' + ROLES[u.role] + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
+  const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('') + '</select></label><label>Também é responsável por uma família (só para tias)<select id="na-f"><option value="">Nenhuma</option>' + famOpts('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
+  const rows = list.map(u => '<tr><td>' + esc(u.name) + '</td><td>' + ROLES[u.role] + (u.role === 'tia' ? '<select class="mini" data-ulink="' + u.id + '" aria-label="Família de ' + esc(u.name) + '"><option value="">Sem família</option>' + famOpts(u.fam) + '</select>' : '') + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
     (u.id === me.id ? '<span class="meta">Você</span>' : '<button type="button" class="btn sm" data-utoggle="' + u.id + '">' + (u.active ? 'Desativar' : 'Reativar') + '</button>') +
     '<button type="button" class="btn sm" data-ureset="' + u.id + '">Redefinir senha</button></div></td></tr>').join('');
   return noticeHtml() + '<div class="head" style="margin:0"><div><h2>Acessos</h2><p class="sub">Quem pode entrar em cada app. Desativar uma conta tira a pessoa do app na hora.</p></div><button type="button" class="btn primary" data-aform>' + (state.aform ? 'Fechar formulário' : 'Novo acesso') + '</button></div>' + form +
@@ -600,6 +610,7 @@ document.addEventListener('click', e => {
   if ('pushopen' in d) { markSeen(); p.tab = 'avisos'; p.screen = null; return render(); }
   if ('pushclose' in d) { markSeen(); return render(); }
   if ('back' in d) { (state.sess.tias ? ts : p).screen = null; return render(); }
+  if (d.mode) { state.mode = d.mode; state.p = newP(); state.t = newT(); return render(); }
   if ('perfil' in d) { p.screen = 'perfil'; return render(); }
   if ('save' in d) { toast('Cadastro atualizado.'); return; }
   if (d.detail) { p.screen = 'detail'; p.card = d.detail; return render(); }
@@ -680,7 +691,7 @@ document.addEventListener('submit', e => {
     state.sess[u.role === 'pais' ? 'pais' : u.role === 'tia' ? 'tias' : 'gestao'] = u.id;
     state.lerr[app] = null; state.lval[app] = '';
     if (u.role === 'pais') { state.fam = u.fam; state.p = newP(); }
-    if (u.role === 'tia') { state.tia = u.tia; state.t = newT(); }
+    if (u.role === 'tia') { state.tia = u.tia; state.t = newT(); state.mode = 'equipe'; }
     if (app === 'gestao') { state.g = 'painel'; state.gform = false; state.eform = false; state.aform = false; state.gq = ''; state.notice = null; }
     log(u.name, 'Entrou no app (' + ROLES[u.role] + ').');
     render(); toast('Bem-vindo, ' + first(u.name) + '!'); return;
@@ -698,13 +709,13 @@ document.addEventListener('submit', e => {
   }
   if (id === 'na') {
     e.preventDefault();
-    const nm = $('#na-n').value.trim(), em = $('#na-e').value.trim().toLowerCase(), role = $('#na-r').value, rm = $('#na-s').value;
+    const nm = $('#na-n').value.trim(), em = $('#na-e').value.trim().toLowerCase(), role = $('#na-r').value, rm = $('#na-s').value, fm = role === 'tia' ? ($('#na-f').value || '') : '';
     if (!nm || !/^\S+@\S+\.\S+$/.test(em)) { toast('Informe o nome e um e-mail válido.'); return; }
     if (USERS.some(u => u.login && u.login.toLowerCase() === em)) { toast('Já existe um acesso com este e-mail.'); return; }
     const tid = role === 'tia' ? 't' + uid8() : '';
     if (cloudOn()) {
       const btn = e.target.querySelector('[type=submit]'); if (btn) { btn.disabled = true; btn.textContent = 'Criando…'; }
-      Cloud.call('createAccount', { name: nm, role, login: em, tia: tid }).then(r => {
+      Cloud.call('createAccount', { name: nm, role, login: em, tia: tid, fam: fm }).then(r => {
         if (tid) TIAS.push({ id: tid, name: nm, room: rm });
         log(actor(), 'Acesso criado para ' + nm + ' (' + ROLES[role] + ').');
         state.notice = { title: 'Acesso criado para ' + nm, text: 'Entra com ' + em + ' e a senha provisória ' + r.pass + '. Anote agora: ela não aparece de novo. Peça para trocar a senha pelo "Esqueci minha senha".' };
@@ -713,7 +724,7 @@ document.addEventListener('submit', e => {
       return;
     }
     const pw = newPass(), nu = { id: 'u' + uid8(), role, name: nm, login: em, pass: pw, active: true };
-    if (tid) { TIAS.push({ id: tid, name: nm, room: rm }); nu.tia = tid; }
+    if (tid) { TIAS.push({ id: tid, name: nm, room: rm }); nu.tia = tid; nu.fam = fm; }
     USERS.push(nu); log(actor(), 'Acesso criado para ' + nm + ' (' + ROLES[role] + ').');
     state.notice = { title: 'Acesso criado para ' + nm, text: 'Entra com ' + em + ' e a senha provisória ' + pw + '. No sistema real, a pessoa recebe um convite por e-mail e cria a própria senha.' };
     state.aform = false; render(); return;
@@ -751,6 +762,11 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('change', e => {
   const ds = e.target.dataset || {};
+  if (ds.ulink) {
+    const u = USERS.find(x => x.id === ds.ulink); if (!u) return;
+    u.fam = e.target.value; log(actor(), u.fam ? 'Vinculou ' + u.name + ' à família ' + fam(u.fam).name + '.' : 'Desvinculou ' + u.name + ' de uma família.');
+    render(); toast(u.fam ? 'Pronto. ' + first(u.name) + ' agora troca entre Equipe e Minha família.' : 'Vínculo removido.'); return;
+  }
   if (ds.pick) {
     const s = state.p.sel, i = s.indexOf(ds.pick);
     if (e.target.checked && i < 0) { s.push(ds.pick); }

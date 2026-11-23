@@ -11,6 +11,7 @@ São **três apps**, cada um na sua própria página, com a identidade visual do
 - **Famílias:** check-in dos filhos, avisos da equipe por notificação e agenda.
 - **Tias:** sala, check-in e check-out, cuidados da criança e envio de avisos. A aba **Visitantes** mostra o **QR Code** para exibir ou imprimir na entrada.
 - **Gestão:** o administrador também vê o QR Code, para imprimir.
+- **Tia ou tio que também é pai ou mãe:** usa uma conta só. Em **Gestão > Acessos**, o administrador escolhe a família na linha da tia (ou no formulário de novo acesso). Daí em diante, o app abre na equipe e mostra no topo a troca **Equipe | Minha família**. Quem não tem os dois papéis não vê a troca.
 - Quem entra no endereço errado não passa: uma conta da Gestão não abre o app das famílias, e uma conta de família não abre a Gestão.
 
 No protótipo, os apps conversam entre si na mesma aba do navegador. Com o Firebase, passam a conversar entre aparelhos.

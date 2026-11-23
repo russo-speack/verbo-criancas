@@ -261,3 +261,10 @@ body.gestao { background: var(--bg); }
 .vmain { max-width: 480px; margin: 0 auto; padding: var(--s5) 0 var(--s4); }
 
 @media print { .app > .appbar, .app > .tabbar, .qrcard .actions, .qrcard .meta, .scr > :not(.qrcard) { display: none !important; } .app { box-shadow: none; } }
+
+/* troca Equipe | Minha família (quem tem os dois papéis) */
+.modebar { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: var(--s3) max(var(--s4), env(safe-area-inset-left, 0px)) 0; padding: 4px; background: var(--blue-soft); border-radius: 999px; }
+.modebar button { min-height: 40px; border: 0; border-radius: 999px; background: transparent; font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--navy); }
+.modebar button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+select.mini { display: block; margin-top: var(--s1); min-height: 36px; padding: 4px var(--s2); font-size: 14px; width: auto; max-width: 100%; }
+th { white-space: nowrap; }

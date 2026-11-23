@@ -9,12 +9,13 @@ service cloud.firestore {
     function hasProfile() { return authed() && exists(profilePath()); }
     function me() { return get(profilePath()).data; }
     function active() { return hasProfile() && me().active == true; }
-    function isPais() { return active() && me().role == 'pais'; }
+    // "família": responsável cadastrado, ou tia/tio que também é responsável por uma família
+    function isPais() { return active() && me().role in ['pais', 'tia'] && me().get('fam', '') != ''; }
     function isTia() { return active() && me().role == 'tia'; }
     function isStaff() { return active() && me().role in ['recepcao', 'coord', 'admin']; }
     function isManager() { return active() && me().role in ['coord', 'admin']; }
     function isAdmin() { return active() && me().role == 'admin'; }
-    function myFam() { return me().fam; }
+    function myFam() { return me().get('fam', ''); }
     function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
     // Primeiro acesso: enquanto config/main não existe, o primeiro administrador pode se criar.
