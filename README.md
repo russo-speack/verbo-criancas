@@ -41,7 +41,7 @@ Ao cadastrar uma família, o sistema cria o acesso do responsável (entra com o 
 - `styles.css`: visual (cores, fontes, espaçamentos)
 - `app.js`: telas e comportamento
 - `favicon.svg`: ícone da aba
-- `cloud.js`, `firebase-config.js`, `firebase-messaging-sw.js`, `manifest.webmanifest`, `firestore.rules`, `firebase.json` e a pasta `functions/`: ligação com o Firebase (veja abaixo)
+- `cloud.js`, `firebase-config.js`, `sw.js`, `manifest.webmanifest`, `firestore.rules` e `firebase.json`: ligação com o Firebase (veja abaixo)
 
 Mantenha tudo na mesma pasta, como está.
 
@@ -57,53 +57,45 @@ Para testar no celular, abra o endereço no navegador. A página pede internet a
 
 No modo protótipo, o login é simulado: as senhas de exemplo ficam visíveis no código e nada é guardado. Ao recarregar a página, tudo volta ao início, e a notificação aparece só dentro da página. Isso serve para testar telas e fluxos. Para dados reais, ligue ao Firebase.
 
-## Ligar ao Firebase (login real, dados sincronizados e notificações)
+## Ligar ao Firebase (plano gratuito)
 
-Sem configuração, o app roda como protótipo local. Para ligar ao Firebase, siga estes passos uma vez:
+Tudo funciona no plano **Spark (gratuito)**, sem cartão. Sem configuração, o app roda como protótipo local. Para ligar ao Firebase, siga estes passos uma vez:
 
 1. **Projeto:** em console.firebase.google.com, crie o projeto "Verbo Crianças".
-2. **Plano Blaze:** em *Uso e faturamento*, mude para o plano **Blaze**. As funções que criam acessos e enviam as notificações exigem isso. Para uma igreja, o uso costuma ficar dentro da cota gratuita.
-3. **Authentication:** em *Authentication > Método de login*, ative **E-mail/senha** e **Anônimo**. O anônimo é o que permite o check-in de visitante pelo QR Code, sem criar conta.
-4. **Domínio:** em *Authentication > Configurações > Domínios autorizados*, adicione `russo-speack.github.io`.
-5. **Firestore:** em *Firestore Database > Criar banco de dados*, escolha o modo **produção** e a região `southamerica-east1` (São Paulo).
-6. **Notificações:** em *Configurações do projeto > Cloud Messaging > Certificados push da Web*, clique em **Gerar par de chaves**. Copie a chave pública.
-7. **App web:** em *Configurações do projeto > Seus apps*, registre um app **Web** e copie o `firebaseConfig`.
-8. **Configuração no código:** abra `firebase-config.js`, cole os valores (`apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`) e a chave do passo 6 em `vapidKey`. Faça o commit no GitHub.
-9. **Regras e funções:** no computador, com o Node.js instalado, na pasta do projeto:
-   ```
-   npm install -g firebase-tools
-   firebase login
-   firebase use --add          (escolha o projeto)
-   cd functions && npm install && cd ..
-   firebase deploy --only firestore:rules,functions
-   ```
-   Se preferir, cole o conteúdo de `firestore.rules` em *Firestore > Regras* e publique. As funções, porém, só sobem pela linha de comando.
-10. **Primeiro administrador:** abra `.../#gestao`. Como ainda não existe ninguém, aparece o formulário **Primeiro acesso**. Crie o administrador logo, antes de divulgar o endereço. Depois disso, o formulário some e o resto é feito em **Gestão > Acessos** (tias e equipe) e **Famílias** (responsáveis).
+2. **Authentication:** em *Build > Authentication > Sign-in method*, ative **E-mail/senha** e **Anônimo**. O anônimo permite o check-in de visitante pelo QR Code, sem criar conta.
+3. **Domínio:** em *Authentication > Settings > Authorized domains*, adicione `russo-speack.github.io`.
+4. **Firestore:** em *Build > Firestore Database > Create database*, escolha o modo **produção** e a região `southamerica-east1` (São Paulo).
+5. **App web:** em *Project settings (engrenagem) > General > Your apps*, registre um app **Web** (ícone `</>`) e copie o `firebaseConfig`.
+6. **Configuração no código:** abra `firebase-config.js`, cole os valores e faça o commit.
+7. **Regras:** em *Firestore Database > Rules*, apague o que estiver lá, cole o conteúdo de `firestore.rules` e clique em **Publish**. Não precisa instalar nada no computador.
+8. **Primeiro administrador:** abra `.../#gestao`. Como ainda não existe ninguém, aparece o formulário **Primeiro acesso**. Crie o administrador logo, antes de divulgar o endereço. Depois disso, o formulário some. Tias e equipe são criadas em **Gestão > Acessos**, e os responsáveis em **Famílias**.
 
 ### Como fica o login
 
-- **Pais:** entram com o **telefone** cadastrado e a senha provisória que a gestão recebe ao cadastrar a família. Na tela **Perfil** podem trocar a senha e ativar as notificações em cada aparelho.
-- **Tias e gestão:** entram com **e-mail** e senha. A senha provisória aparece uma única vez, na tela do administrador. Quem tem e-mail pode usar "Esqueci minha senha".
-- **Desativar um acesso** corta a pessoa do app e bloqueia o login no servidor.
+- **Pais:** entram com o **telefone** cadastrado e a senha provisória que a gestão recebe ao cadastrar a família. Na tela **Perfil** podem trocar a senha e ativar os avisos no aparelho.
+- **Tias e gestão:** entram com **e-mail** e senha. A senha provisória aparece uma única vez, na tela de quem criou o acesso. Quem tem e-mail pode usar "Esqueci minha senha".
+- **Redefinir a senha de um responsável** cria um novo login para o mesmo telefone, mostra a nova senha e inutiliza a antiga. Para tias e gestão, a redefinição envia um link ao e-mail.
+- **Desativar um acesso** impede a pessoa de ler ou gravar qualquer dado, e ela é desconectada na hora.
 - Cada aparelho guarda **um perfil por vez**. Para trocar de app com outra conta, saia primeiro.
 
-### O que cada parte faz
+### Arquivos
 
 | Arquivo | Função |
 | --- | --- |
 | `firebase-config.js` | Chaves do seu projeto (podem ficar públicas) |
-| `cloud.js` | Liga o app ao Firebase: login, sincronização e notificações |
+| `cloud.js` | Liga o app ao Firebase: login, sincronização e avisos |
 | `firestore.rules` | Quem lê e grava o quê (pais só veem a própria família, tias e gestão conforme o perfil) |
-| `functions/index.js` | Cria acessos, redefine senhas, desativa contas e envia o push |
-| `firebase-messaging-sw.js` | Mostra a notificação com o app fechado |
+| `sw.js` | Mostra o aviso como notificação do aparelho |
 | `manifest.webmanifest` | Permite instalar o site na tela inicial |
 
-### Limites desta versão
+### Limites do plano gratuito
 
+- **Avisos:** a notificação aparece no aparelho **enquanto o app estiver aberto**, mesmo em segundo plano. Com o celular bloqueado ou o app fechado, o aviso só chega quando a pessoa abrir o app. Notificação de verdade com o celular bloqueado exige enviar por um servidor, que só existe no plano Blaze (pago por uso). Se um dia migrarem, é uma etapa a mais, sem refazer o resto.
 - **Notificação no iPhone** só funciona depois de **adicionar o site à tela inicial** (Compartilhar > Adicionar à Tela de Início) e abrir por esse ícone.
 - A **lotação das salas** que pais e visitantes veem é atualizada quando alguém da equipe está com o app aberto. A trava de sala lotada é feita no aparelho, não no servidor.
 - O **relatório de domingos anteriores** ainda usa números de exemplo. Os dados de hoje são reais.
-- Qualquer pessoa conectada consegue **escrever** no registro de ações, mas só o administrador lê. Cadastros feitos pelo QR Code de visitante são abertos por natureza: confira as famílias novas na Gestão.
+- Qualquer pessoa conectada consegue **escrever** no registro de ações, mas só o administrador lê. O cadastro pelo QR Code de visitante é aberto por natureza: confira as famílias novas na Gestão.
+- Cota gratuita do Firestore: 50 mil leituras e 20 mil gravações por dia. Costuma bastar para uma igreja pequena. Mais crianças e salas abertas ao mesmo tempo gastam mais.
 - Nada foi testado com o seu projeto real. Se algo recusar gravar, a tela avisa e o console do navegador mostra o motivo.
 
 *Aprender. Adorar. Crescer com Jesus.*

@@ -10,11 +10,11 @@
   if (!C.enabled) return;
 
   const SDK = 'https://www.gstatic.com/firebasejs/10.12.5/';
-  const REGION = 'southamerica-east1';
-  let auth, db, fns, unsubs = [], loaded = {}, last = {}, loggingIn = false, pending = false, visitAlertsFam = null, anonKidsSeen = false, readyResolve;
+  let auth, db, unsubs = [], loaded = {}, last = {}, loggingIn = false, pending = false, visitAlertsFam = null, anonKidsSeen = false, readyResolve;
   const readyPromise = new Promise(r => { readyResolve = r; });
 
   const digits = s => String(s || '').replace(/\D/g, '');
+  const phoneEmail = (ph, v) => 'p' + digits(ph) + (v ? 'v' + v : '') + '@pais.verbo.app';
   const stable = o => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).sort().reduce((a, x) => { if (v[x] !== undefined) a[x] = v[x]; return a; }, {}) : v);
   const COLS = () => ({ rooms: ROOMS, tias: TIAS, families: FAMS, kids: KIDS, alerts: state.alerts, audit: state.audit, users: USERS, events: EVENTS });
   const STRIP = { users: ['pass', 'tokens'] };
@@ -61,6 +61,9 @@
     const keep = arr.filter(o => o.id && !(o.id in old) && !items.some(i => i.id === o.id));
     arr.splice(0, arr.length, ...items, ...keep);
     const seen = last[col] = {};
+    if (col === 'alerts' && loaded.alerts && (C.anon || (C.profile && C.profile.role === 'pais'))) {
+      items.filter(o => !(o.id in old) && !o.seen).forEach(o => C.notify(o.text));
+    }
     items.forEach(o => { seen[o.id] = stable(ser(col, o)); });
     loaded[col] = true;
     if (col === 'kids' && C.anon && !anonKidsSeen) {
@@ -176,13 +179,12 @@
     if (C.app === 'tias') { state.tia = p.tia; state.t = newT(); }
     if (C.app === 'gestao') { state.g = 'painel'; state.gform = false; state.eform = false; state.aform = false; state.gq = ''; state.notice = null; }
     listen(p);
-    if (C.app === 'pais') refreshPush();
     render();
   }
 
   function init() {
     firebase.initializeApp(cfg);
-    auth = firebase.auth(); db = firebase.firestore(); fns = firebase.app().functions(REGION);
+    auth = firebase.auth(); db = firebase.firestore();
     auth.onAuthStateChanged(async u => {
       if (loggingIn) return;
       if (!u) { resetLocal(); C.anon = false; watchPublic(); render(); return; }
@@ -197,7 +199,7 @@
 
   C.boot = function () {
     [USERS, FAMS, KIDS, TIAS, EVENTS, state.alerts, state.audit].forEach(a => a.splice(0, a.length));
-    loadScripts(['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js', 'firebase-functions-compat.js', 'firebase-messaging-compat.js'])
+    loadScripts(['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'])
       .then(init)
       .catch(e => { state.lerr.pais = state.lerr.tias = state.lerr.gestao = e.message; render(); });
   };
@@ -208,11 +210,16 @@
 
   C.login = async function (app, id, pass) {
     await readyPromise;
-    const email = id.includes('@') ? id.toLowerCase() : 'p' + digits(id) + '@pais.verbo.app';
     const copy = LOGIN_COPY[app];
+    const emails = id.includes('@') ? [id.toLowerCase()] : [0, 1, 2, 3, 4].map(v => phoneEmail(id, v));
     loggingIn = true;
     try {
-      const cred = await auth.signInWithEmailAndPassword(email, pass);
+      let cred = null, lastErr = null;
+      for (const email of emails) {
+        try { cred = await auth.signInWithEmailAndPassword(email, pass); break; }
+        catch (e) { lastErr = e; if (!/invalid-credential|wrong-password|user-not-found/.test(e.code || '')) break; }
+      }
+      if (!cred) throw lastErr;
       const snap = await db.collection('users').doc(cred.user.uid).get();
       const p = snap.exists ? Object.assign({}, snap.data(), { id: cred.user.uid }) : null;
       if (!p || !appRoles(app).includes(p.role)) { await auth.signOut(); return { err: copy.wrong }; }
@@ -248,7 +255,60 @@
     finally { loggingIn = false; }
   };
 
-  C.call = (name, data) => fns.httpsCallable(name)(data).then(r => r.data).catch(e => { throw new Error(e.code === 'functions/not-found' ? 'As funções do Firebase ainda não foram publicadas (firebase deploy --only functions).' : (e.message || 'Não foi possível concluir.')); });
+  /* ---------- acessos (sem servidor: funciona no plano gratuito) ---------- */
+  function genPass() {
+    const a = 'abcdefghjkmnpqrstuvwxyz23456789', r = new Uint8Array(10); crypto.getRandomValues(r);
+    return Array.from(r, x => a[x % a.length]).join('');
+  }
+
+  // cria a conta de login numa instância secundária, para não desconectar quem está criando
+  async function authCreate(email, pass) {
+    const sec = firebase.initializeApp(cfg, 'sec' + Date.now());
+    try {
+      const cred = await sec.auth().createUserWithEmailAndPassword(email, pass);
+      await sec.auth().signOut();
+      return cred.user.uid;
+    } finally { sec.delete().catch(() => {}); }
+  }
+
+  async function createAccount(d) {
+    const me = C.profile, role = d.role, name = String(d.name || '').trim().slice(0, 80);
+    if (!me || (role === 'pais' ? !['recepcao', 'coord', 'admin'].includes(me.role) : me.role !== 'admin')) throw new Error('Você não tem permissão para criar este acesso.');
+    if (!name) throw new Error('Informe o nome.');
+    let email, ver = Number(d.ver) || 0;
+    if (role === 'pais') { if (digits(d.phone).length < 8) throw new Error('Informe um telefone válido, com DDD.'); email = phoneEmail(d.phone, ver); }
+    else { email = String(d.login || '').trim().toLowerCase(); if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Informe um e-mail válido.'); }
+    const pass = genPass();
+    let uid;
+    try { uid = await authCreate(email, pass); }
+    catch (e) { throw new Error(e.code === 'auth/email-already-in-use' ? 'Já existe um acesso com este login.' : msg(e)); }
+    const profile = { id: uid, role, name, login: role === 'pais' ? '' : email, phone: role === 'pais' ? String(d.phone).slice(0, 30) : '', active: true };
+    if (role === 'pais') { profile.fam = String(d.fam); if (ver) profile.ver = ver; }
+    if (role === 'tia') profile.tia = String(d.tia);
+    await db.collection('users').doc(uid).set(profile);
+    return { uid, pass, profile };
+  }
+
+  async function resetPassword(d) {
+    const t = USERS.find(u => u.id === d.uid);
+    if (!t) throw new Error('Acesso não encontrado.');
+    if (t.role !== 'pais' && C.profile.role !== 'admin') throw new Error('Você não tem permissão.');
+    if (t.role !== 'pais') { await auth.sendPasswordResetEmail(t.login); return { email: t.login }; }
+    // responsável sem e-mail: cria um novo login para o mesmo telefone e desativa o antigo
+    const r = await createAccount({ role: 'pais', name: t.name, phone: t.phone, fam: t.fam, ver: (t.ver || 0) + 1 });
+    await db.collection('users').doc(t.id).update({ active: false, replaced: true });
+    return { pass: r.pass };
+  }
+
+  C.call = async function (name, data) {
+    if (name === 'createAccount') return createAccount(data);
+    if (name === 'resetPassword') return resetPassword(data);
+    if (name === 'setActive') {
+      if (!C.profile || C.profile.role !== 'admin') throw new Error('Só o administrador muda o estado de um acesso.');
+      await db.collection('users').doc(data.uid).update({ active: data.active === true }); return { ok: true };
+    }
+    throw new Error('Ação desconhecida.');
+  };
 
   C.forgot = async function (email) {
     await readyPromise;
@@ -267,24 +327,26 @@
     return auth.currentUser;
   };
 
-  /* ---------- notificações push ---------- */
-  async function getToken(askPermission) {
-    if (!('serviceWorker' in navigator) || !('Notification' in window)) return { err: 'Este navegador não permite notificações. No iPhone, adicione o site à tela inicial e abra por lá.' };
-    if (!cfg.vapidKey) return { err: 'A chave de notificações (vapidKey) ainda não foi configurada.' };
-    if (askPermission && Notification.permission !== 'granted') {
-      const perm = await Notification.requestPermission();
-      if (perm !== 'granted') return { err: 'As notificações foram bloqueadas neste aparelho. Libere nas configurações do navegador.' };
-    }
-    if (Notification.permission !== 'granted') return { err: 'sem permissão' };
-    const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-    const messaging = firebase.messaging();
-    const token = await messaging.getToken({ vapidKey: cfg.vapidKey, serviceWorkerRegistration: reg });
-    if (!token) return { err: 'Não foi possível ativar as notificações.' };
-    await db.collection('users').doc(C.profile.id).update({ tokens: firebase.firestore.FieldValue.arrayUnion(token) });
-    messaging.onMessage(p => { const d = p.data || {}; toast((d.body || 'Novo aviso da equipe.')); });
-    return { ok: true };
+  /* ---------- avisos no aparelho ----------
+     Sem servidor (plano gratuito), o aviso aparece como notificação do aparelho enquanto o app
+     estiver aberto, mesmo em segundo plano. Com o celular bloqueado ou o app fechado, só com o
+     plano Blaze e uma função de envio (push real). */
+  let swReg = null;
+  async function showNative(body) {
+    try {
+      if (!window.Notification || Notification.permission !== 'granted') return;
+      if (!swReg && 'serviceWorker' in navigator) swReg = await navigator.serviceWorker.register('sw.js');
+      if (swReg) await swReg.showNotification('Verbo Crianças', { body, icon: 'favicon.svg', tag: 'verbo-aviso', data: { url: './#pais' } });
+      else new Notification('Verbo Crianças', { body });
+    } catch (e) { /* sem permissão ou sem suporte */ }
   }
-  C.enablePush = () => getToken(true).catch(e => ({ err: msg(e) }));
-  function refreshPush() { if (window.Notification && Notification.permission === 'granted') getToken(false).catch(() => {}); }
+  C.enablePush = async function () {
+    if (!window.Notification) return { err: 'Este navegador não mostra notificações. No iPhone, adicione o site à tela inicial e abra por lá.' };
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (perm !== 'granted') return { err: 'As notificações foram bloqueadas neste aparelho. Libere nas configurações do navegador.' };
+    await showNative('Pronto! Os avisos da equipe vão aparecer assim.');
+    return { ok: true };
+  };
   C.pushState = () => (window.Notification ? Notification.permission : 'unsupported');
+  C.notify = showNative;
 })();

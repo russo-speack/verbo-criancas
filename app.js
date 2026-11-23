@@ -359,8 +359,8 @@ function screenStory() {
 function cloudPerfil() {
   if (!cloudOn()) return '';
   const st = Cloud.pushState();
-  const push = st === 'granted' ? '<p class="meta"><span class="chip ok">Ativadas neste aparelho</span></p>' : st === 'denied' ? '<p class="meta">As notificações estão bloqueadas neste aparelho. Libere nas configurações do navegador.</p>' : st === 'unsupported' ? '<p class="meta">Este navegador não mostra notificações. No iPhone, adicione o site à tela inicial e abra por lá.</p>' : '<button type="button" class="btn primary" data-pushon>Ativar notificações neste aparelho</button>';
-  return '<p class="sec">Notificações neste aparelho</p><div class="card"><p class="meta">Para receber os avisos da equipe com o celular bloqueado, ative as notificações em cada aparelho que você usa.</p>' + push + '</div>' +
+  const push = st === 'granted' ? '<p class="meta"><span class="chip ok">Ativadas neste aparelho</span></p>' : st === 'denied' ? '<p class="meta">As notificações estão bloqueadas neste aparelho. Libere nas configurações do navegador.</p>' : st === 'unsupported' ? '<p class="meta">Este navegador não mostra notificações. No iPhone, adicione o site à tela inicial e abra por lá.</p>' : '<button type="button" class="btn primary" data-pushon>Ativar avisos neste aparelho</button>';
+  return '<p class="sec">Avisos neste aparelho</p><div class="card"><p class="meta">Ative para os avisos da equipe aparecerem como notificação do aparelho. Eles chegam enquanto o app estiver aberto, mesmo em segundo plano.</p>' + push + '</div>' +
     '<p class="sec">Trocar senha</p><form class="card form" id="pw" novalidate><label>Nova senha (mínimo 8 caracteres)<input type="password" id="pw-n" autocomplete="new-password"></label><button type="submit" class="btn">Trocar senha</button></form>';
 }
 
@@ -516,7 +516,7 @@ function noticeHtml() {
 
 function gAcessos() {
   const me = sessUser('gestao'), f = state.af;
-  const list = USERS.filter(u => f === 'todos' || (f === 'pais' && u.role === 'pais') || (f === 'tias' && u.role === 'tia') || (f === 'gestao' && STAFF_ROLES.includes(u.role)));
+  const list = USERS.filter(u => !u.replaced).filter(u => f === 'todos' || (f === 'pais' && u.role === 'pais') || (f === 'tias' && u.role === 'tia') || (f === 'gestao' && STAFF_ROLES.includes(u.role)));
   const pills = [['todos', 'Todos'], ['pais', 'Pais'], ['tias', 'Tias'], ['gestao', 'Gestão']].map(x => '<button type="button" data-af="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>').join('');
   const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
   const rows = list.map(u => '<tr><td>' + esc(u.name) + '</td><td>' + ROLES[u.role] + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
@@ -650,7 +650,7 @@ document.addEventListener('click', e => {
   if (d.ureset) {
     const u = USERS.find(x => x.id === d.ureset); if (!u) return;
     if (cloudOn()) {
-      Cloud.call('resetPassword', { uid: u.id }).then(r => { log(actor(), 'Senha de ' + u.name + ' redefinida.'); state.notice = { title: 'Senha redefinida para ' + u.name, text: 'Nova senha provisória: ' + r.pass + '. Anote agora: ela não aparece de novo.' }; render(); }).catch(err => toast(err.message));
+      Cloud.call('resetPassword', { uid: u.id }).then(r => { log(actor(), 'Senha de ' + u.name + ' redefinida.'); state.notice = { title: 'Senha redefinida para ' + u.name, text: r.email ? 'Enviamos um link para ' + r.email + '. A pessoa cria a nova senha por ele.' : 'Nova senha provisória: ' + r.pass + '. Anote agora: ela não aparece de novo. A senha antiga deixou de valer.' }; render(); }).catch(err => toast(err.message));
       return;
     }
     u.pass = newPass(); log(actor(), 'Senha de ' + u.name + ' redefinida.');

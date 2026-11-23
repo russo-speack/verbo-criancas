@@ -8,6 +8,5 @@ globalThis.VERBO_FIREBASE = {
   projectId: '',
   storageBucket: '',
   messagingSenderId: '',
-  appId: '',
-  vapidKey: '' // Cloud Messaging > Certificados push da Web > Gerar par de chaves
+  appId: ''
 };

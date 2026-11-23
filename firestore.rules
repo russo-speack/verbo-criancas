@@ -26,9 +26,11 @@ service cloud.firestore {
     // ---- contas ----
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid || isStaff();
-      allow create: if bootstrapping() && request.auth.uid == uid && request.resource.data.role == 'admin' && request.resource.data.active == true;
+      allow create: if (bootstrapping() && request.auth.uid == uid && request.resource.data.role == 'admin' && request.resource.data.active == true)
+        || (isAdmin() && request.resource.data.id == uid && request.resource.data.active == true)
+        || (isStaff() && request.resource.data.id == uid && request.resource.data.role == 'pais' && request.resource.data.active == true);
       allow update: if isAdmin()
-        || (request.auth.uid == uid && active() && changed().hasOnly(['tokens']));
+        || (isStaff() && resource.data.role == 'pais' && changed().hasOnly(['active', 'replaced']));
     }
 
     // ---- abertura do check-in e contagem por sala (lida até por visitantes) ----
