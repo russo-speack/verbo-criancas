@@ -18,6 +18,11 @@ service cloud.firestore {
     function myFam() { return me().get('fam', ''); }
     function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
+    // ---- validação de dados (vale também para o que o visitante grava sozinho) ----
+    function okId(id) { return id.matches('[A-Za-z0-9_-]{1,40}'); }
+    function str(v, n) { return v is string && v.size() <= n; }
+    function openNow() { return get(/databases/$(db)/documents/config/main).data.get('open', true) == true; }
+
     // Primeiro acesso: enquanto config/main não existe, o primeiro administrador pode se criar.
     function configPath() { return /databases/$(db)/documents/config/main; }
     function bootstrapping() {
@@ -31,10 +36,13 @@ service cloud.firestore {
         || (isAdmin() && request.resource.data.id == uid && request.resource.data.active == true)
         || (isStaff() && request.resource.data.id == uid && request.resource.data.role == 'pais' && request.resource.data.active == true);
       allow update: if isAdmin()
-        || (isStaff() && resource.data.role == 'pais' && changed().hasOnly(['active', 'replaced']));
+        || (isStaff() && resource.data.role == 'pais' && changed().hasOnly(['active', 'replaced']))
+        // a própria pessoa registra o consentimento de fotos
+        || (active() && request.auth.uid == uid && changed().hasOnly(['prefs'])
+            && request.resource.data.prefs.keys().hasOnly(['fotos']) && request.resource.data.prefs.fotos is bool);
     }
 
-    // ---- abertura do check-in e contagem por sala (lida até por visitantes) ----
+    // ---- abertura do check-in, contagem por sala e histórico (lido até por visitantes) ----
     match /config/main {
       allow get: if true;
       allow create: if bootstrapping();
@@ -47,11 +55,11 @@ service cloud.firestore {
       allow update: if isManager();
     }
     match /tias/{id} {
-      allow read: if authed();
+      allow read: if active();
       allow create, update: if isManager();
     }
     match /events/{id} {
-      allow read: if authed();
+      allow read: if active();
       allow create, update: if isManager();
     }
 
@@ -59,48 +67,73 @@ service cloud.firestore {
     match /families/{id} {
       allow read: if isStaff() || isTia()
         || (isPais() && myFam() == id)
-        || (signedIn() && resource.data.owner == request.auth.uid);
-      allow create: if isStaff()
-        || (signedIn() && request.resource.data.visitor == true && request.resource.data.owner == request.auth.uid);
+        || (signedIn() && resource.data.get('owner', '') == request.auth.uid);
+      allow create: if (isStaff() && okId(id))
+        || (signedIn() && okId(id) && request.resource.data.visitor == true && request.resource.data.owner == request.auth.uid
+            && request.resource.data.keys().hasOnly(['id', 'name', 'visitor', 'owner', 'phone', 'guardians'])
+            && request.resource.data.keys().hasAll(['name', 'visitor', 'owner', 'guardians'])
+            && str(request.resource.data.name, 80) && str(request.resource.data.get('phone', ''), 30)
+            && request.resource.data.guardians is list && request.resource.data.guardians.size() == 1
+            && str(request.resource.data.guardians[0], 100));
       allow update: if isStaff();
     }
 
     match /kids/{id} {
       allow read: if isStaff() || isTia()
         || (isPais() && resource.data.fam == myFam())
-        || (signedIn() && resource.data.owner == request.auth.uid);
-      allow create: if isStaff()
-        || (signedIn() && request.resource.data.visitor == true && request.resource.data.owner == request.auth.uid && request.resource.data.status == 'in');
-      allow update: if isStaff() || isTia()
+        || (signedIn() && resource.data.get('owner', '') == request.auth.uid);
+      // o visitante só cria a própria criança, em uma família que ele mesmo criou e com o check-in aberto
+      allow create: if (isStaff() && okId(id))
+        || (signedIn() && okId(id) && openNow()
+            && request.resource.data.visitor == true && request.resource.data.owner == request.auth.uid && request.resource.data.status == 'in'
+            && request.resource.data.keys().hasOnly(['id', 'name', 'age', 'room', 'fam', 'owner', 'note', 'obs', 'status', 'time', 'out', 'by', 'code', 'visitor', 'day'])
+            && request.resource.data.keys().hasAll(['name', 'room', 'fam', 'owner', 'status', 'visitor'])
+            && str(request.resource.data.name, 80) && str(request.resource.data.get('age', ''), 30)
+            && str(request.resource.data.get('note', ''), 300) && str(request.resource.data.get('obs', ''), 300)
+            && str(request.resource.data.get('by', ''), 100) && str(request.resource.data.get('code', ''), 20)
+            && str(request.resource.data.get('time', ''), 5) && str(request.resource.data.get('out', ''), 5) && str(request.resource.data.get('day', ''), 10)
+            && exists(/databases/$(db)/documents/rooms/$(request.resource.data.room))
+            && getAfter(/databases/$(db)/documents/families/$(request.resource.data.fam)).data.get('owner', '') == request.auth.uid);
+      allow update: if isStaff()
+        // a tia só mexe na presença (check-in e check-out)
+        || (isTia() && changed().hasOnly(['status', 'time', 'out', 'by', 'day']))
+        // o responsável só faz o check-in dos próprios filhos, e só com o check-in aberto
         || (isPais() && resource.data.fam == myFam() && request.resource.data.fam == resource.data.fam
-            && changed().hasOnly(['status', 'time', 'out', 'by']));
+            && changed().hasOnly(['status', 'time', 'out', 'by', 'day'])
+            && resource.data.status == 'out' && request.resource.data.status == 'in' && openNow());
     }
 
     match /alerts/{id} {
       allow read: if isStaff() || isTia()
         || (isPais() && resource.data.fam == myFam())
         || (signedIn() && exists(/databases/$(db)/documents/families/$(resource.data.fam))
-            && get(/databases/$(db)/documents/families/$(resource.data.fam)).data.owner == request.auth.uid);
-      allow create: if isStaff() || isTia();
-      allow update: if isStaff() || isTia()
+            && get(/databases/$(db)/documents/families/$(resource.data.fam)).data.get('owner', '') == request.auth.uid);
+      allow create: if (isStaff() || isTia()) && okId(id)
+        && request.resource.data.keys().hasOnly(['id', 'at', 'fam', 'kid', 'text', 'time', 'reply', 'seen', 'by'])
+        && str(request.resource.data.text, 500);
+      allow update: if ((isStaff() || isTia()) && changed().hasOnly(['seen', 'reply']))
         || (isPais() && resource.data.fam == myFam() && changed().hasOnly(['seen', 'reply']))
         || (signedIn() && exists(/databases/$(db)/documents/families/$(resource.data.fam))
-            && get(/databases/$(db)/documents/families/$(resource.data.fam)).data.owner == request.auth.uid
+            && get(/databases/$(db)/documents/families/$(resource.data.fam)).data.get('owner', '') == request.auth.uid
             && changed().hasOnly(['seen', 'reply']));
     }
 
     // ---- aparelhos dos pais inscritos nos avisos ----
     match /pushsubs/{id} {
       allow read: if isStaff() || isTia();
-      allow create: if isPais() && request.resource.data.owner == request.auth.uid && request.resource.data.fam == myFam();
-      allow update: if isPais() && resource.data.owner == request.auth.uid && request.resource.data.owner == request.auth.uid && request.resource.data.fam == myFam();
+      allow create: if isPais() && request.resource.data.owner == request.auth.uid && request.resource.data.fam == myFam()
+        && request.resource.data.keys().hasOnly(['fam', 'owner', 'sub', 'at']) && str(request.resource.data.sub, 3000);
+      allow update: if isPais() && resource.data.owner == request.auth.uid && request.resource.data.owner == request.auth.uid && request.resource.data.fam == myFam()
+        && request.resource.data.keys().hasOnly(['fam', 'owner', 'sub', 'at']) && str(request.resource.data.sub, 3000);
       allow delete: if isStaff() || isTia() || (isPais() && resource.data.owner == request.auth.uid);
     }
 
-    // ---- registro de ações: qualquer pessoa conectada escreve, só o administrador lê ----
+    // ---- registro de ações: só quem tem acesso ativo escreve, só o administrador lê ----
     match /audit/{id} {
       allow read: if isAdmin();
-      allow create: if signedIn();
+      allow create: if active() && okId(id)
+        && request.resource.data.keys().hasOnly(['id', 'at', 't', 'who', 'text'])
+        && str(request.resource.data.text, 300) && str(request.resource.data.who, 80);
     }
   }
 }

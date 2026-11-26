@@ -47,6 +47,25 @@ async function vapidHeader(endpoint, env) {
   return 'vapid t=' + head + '.' + body + '.' + bytesToB64u(sig) + ', k=' + env.VAPID_PUBLIC;
 }
 
+// chaves públicas do Google, guardadas por 1 hora para não buscar a cada aviso
+let keyCache = { at: 0, keys: [] };
+async function googleKeys(force) {
+  if (!force && keyCache.keys.length && Date.now() - keyCache.at < 3600000) return keyCache.keys;
+  const jwks = await (await fetch('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')).json();
+  keyCache = { at: Date.now(), keys: jwks.keys || [] };
+  return keyCache.keys;
+}
+
+/* Só equipe de sala e gestão com acesso ativo podem pedir avisos. Qualquer pessoa consegue criar um
+   login no Firebase com a chave pública do app, então o login sozinho não basta: confere o perfil. */
+async function checkProfile(token, uid, projectId) {
+  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(projectId) + '/databases/(default)/documents/users/' + encodeURIComponent(uid), { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) throw new Error('perfil');
+  const f = (await r.json()).fields || {};
+  const role = f.role && f.role.stringValue;
+  if (!(f.active && f.active.booleanValue === true) || !['tia', 'recepcao', 'coord', 'admin'].includes(role)) throw new Error('perfil');
+}
+
 /* Confere o login do Firebase de quem está pedindo */
 async function verifyFirebaseToken(token, projectId) {
   const [h, p, s] = String(token || '').split('.');
@@ -54,8 +73,8 @@ async function verifyFirebaseToken(token, projectId) {
   const dec = x => JSON.parse(new TextDecoder().decode(b64uToBytes(x)));
   const head = dec(h), pay = dec(p), now = Math.floor(Date.now() / 1000);
   if (head.alg !== 'RS256' || pay.aud !== projectId || pay.iss !== 'https://securetoken.google.com/' + projectId || !pay.sub || pay.exp < now || pay.iat > now + 300) throw new Error('token');
-  const jwks = await (await fetch('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')).json();
-  const jwk = (jwks.keys || []).find(k => k.kid === head.kid);
+  let jwk = (await googleKeys()).find(k => k.kid === head.kid);
+  if (!jwk) jwk = (await googleKeys(true)).find(k => k.kid === head.kid);
   if (!jwk) throw new Error('token');
   const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   if (!(await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64uToBytes(s), enc.encode(h + '.' + p)))) throw new Error('token');
@@ -80,7 +99,8 @@ export default {
     const out = (o, st) => new Response(JSON.stringify(o), { status: st || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, cors) });
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (req.method !== 'POST') return out({ ok: true, name: 'verbo-criancas-push' });
-    try { await verifyFirebaseToken((req.headers.get('Authorization') || '').replace(/^Bearer /, ''), env.PROJECT_ID); }
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer /, '');
+    try { const who = await verifyFirebaseToken(token, env.PROJECT_ID); await checkProfile(token, who.sub, env.PROJECT_ID); }
     catch (e) { return out({ error: 'Não autorizado.' }, 401); }
     let d; try { d = await req.json(); } catch (e) { return out({ error: 'Pedido inválido.' }, 400); }
     const subs = (Array.isArray(d.subs) ? d.subs : []).filter(s => s && s.endpoint && s.keys && s.keys.p256dh && s.keys.auth).slice(0, 20);

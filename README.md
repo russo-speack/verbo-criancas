@@ -129,3 +129,14 @@ Como funciona: o aparelho dos pais se inscreve e guarda a inscrição no Firesto
 - Nada foi testado com o seu projeto real. Se algo recusar gravar, a tela avisa e o console do navegador mostra o motivo.
 
 *Aprender. Adorar. Crescer com Jesus.*
+
+## Segurança e confiabilidade (auditoria de 26/11/2026)
+
+- **Republique o `firestore.rules`** no Firebase (Firestore > Regras > Publicar). As regras agora validam o que o visitante grava, limitam a tia a mexer só na presença, deixam o responsável apenas fazer check-in (com o check-in aberto) e exigem acesso ativo para ler equipe e agenda e gravar o registro.
+- **Worker de avisos**: agora só aceita pedidos de equipe de sala ou gestão com acesso ativo (antes bastava qualquer login do Firebase). Cole o novo `worker/push-worker.js` no Cloudflare e publique.
+- **Check-out**: a equipe digita o código do QR de retirada. Sem código, só marcando que conferiu o documento, e isso fica no Registro.
+- **Encerrar culto** (Gestão > Painel): zera as salas, fecha o check-in e guarda o total no Relatórios. Os avisos de cultos antigos deixam de aparecer.
+- **Autorizados a retirar** e **crianças** podem ser incluídos/removidos em Gestão > Famílias > Editar cadastro.
+- **Fotos e vídeos**: o consentimento é salvo na conta do responsável e aparece na ficha da família.
+- Páginas com Content-Security-Policy (bloqueia scripts de fora) e todo texto vindo do servidor é escapado.
+- Limites que continuam: lotação das salas é conferida no aparelho (não no servidor); o visitante pode ser usado por qualquer pessoa com o QR, por natureza; push no iPhone exige instalar na tela inicial.

@@ -34,7 +34,7 @@ const USERS = [
   { id: 'u11', role: 'coord', name: 'Débora Dias', login: 'coord@verbo.example', pass: 'coord123', active: true },
   { id: 'u12', role: 'recepcao', name: 'Lúcia Prado', login: 'recepcao@verbo.example', pass: 'recepcao123', active: true }
 ];
-const MODE = window.VERBO_APP || 'familia';
+const MODE = (document.body && document.body.dataset.app) || 'familia';
 const LOGIN_COPY = {
   familia: { label: 'Telefone ou e-mail', sub: 'Entre com o acesso que a igreja cadastrou. O app abre sozinho na área certa, seja você da família ou da equipe.', hint: 'Famílias entram com o telefone cadastrado. A equipe, com o e-mail.', empty: 'Informe o telefone ou e-mail e a senha.', wrong: 'Telefone, e-mail ou senha incorretos.' },
   gestao: { label: 'E-mail', sub: 'Cadastros, salas, equipe, agenda e relatórios. Cada perfil vê só o que pode usar.', hint: 'Entre com o e-mail do seu acesso.', empty: 'Informe o e-mail e a senha.', wrong: 'E-mail ou senha incorretos.' }
@@ -57,13 +57,29 @@ const KIDS = [
   { id: 'k7', name: 'Théo Lima', age: '2 anos', room: 'bercario', fam: 'lima', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: 'THEO-6641' },
   { id: 'k8', name: 'Arthur Lima', age: '8 anos', room: 'kids', fam: 'lima', note: '', obs: '', status: 'left', time: '09:10', out: '10:12', by: 'Bruno Lima', code: 'ARTH-9150' }
 ];
-const EVENTS = [
-  { day: '08', mon: 'nov', w: 'Domingo', t: '9h', n: 'Culto infantil', note: 'Check-in a partir das 8h30.' },
-  { day: '15', mon: 'nov', w: 'Domingo', t: '9h', n: 'Culto infantil', note: 'Se a criança tiver Bíblia, pode trazer.' },
-  { day: '18', mon: 'nov', w: 'Quarta', t: '19h30', n: 'Encontro de pais', note: 'Conversa com a coordenação infantil sobre rotina e cuidado.' },
-  { day: '22', mon: 'nov', w: 'Domingo', t: '9h', n: 'Culto infantil', note: 'Dia de histórias em família.' }
-];
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const WEEK = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const nextDow = (dow, add) => { const d = startOfToday(); d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7) + (add || 0) * 7); return d; };
+const mkEv = (d, t, n, note) => ({ ts: d.getTime(), day: String(d.getDate()).padStart(2, '0'), mon: MONTHS[d.getMonth()], w: WEEK[d.getDay()], t, n, note });
+const EVENTS = [
+  mkEv(nextDow(0, 0), '9h', 'Culto infantil', 'Check-in a partir das 8h30.'),
+  mkEv(nextDow(3, 0), '19h30', 'Encontro de pais', 'Conversa com a coordenação infantil sobre rotina e cuidado.'),
+  mkEv(nextDow(0, 1), '9h', 'Culto infantil', 'Se a criança tiver Bíblia, pode trazer.'),
+  mkEv(nextDow(0, 2), '9h', 'Culto infantil', 'Dia de histórias em família.')
+];
+// data do evento: usa o carimbo gravado; eventos antigos sem carimbo são lidos pelo dia e mês
+const evTs = e => {
+  if (e.ts) return e.ts;
+  const t = startOfToday(), m = MONTHS.indexOf(e.mon);
+  const d = new Date(t.getFullYear(), m < 0 ? 0 : m, +e.day || 1);
+  if (d < t - 30 * 86400000) d.setFullYear(d.getFullYear() + 1);
+  return d.getTime();
+};
+const upcoming = () => EVENTS.filter(e => evTs(e) >= startOfToday().getTime()).sort((a, b) => evTs(a) - evTs(b));
+const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const todayShort = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
+const todayLong = () => new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
 const PAST = [
   { d: '25/10', c: 38, v: 2, avg: '1h 48min' }, { d: '18/10', c: 44, v: 5, avg: '1h 55min' },
   { d: '11/10', c: 36, v: 1, avg: '1h 42min' }, { d: '04/10', c: 41, v: 3, avg: '1h 50min' }
@@ -78,23 +94,32 @@ const QUICK = [
 const newP = () => ({ tab: 'home', screen: null, sel: [], ckid: null, card: null, done: [] });
 const newT = () => ({ tab: 'sala', screen: null, room: null, kid: null });
 const state = {
-  mode: 'equipe',
+  mode: 'equipe', hist: [], fedit: null,
   fam: 'souza', sheet: null, visit: null, vn: 0, open: true, p: newP(), t: newT(), tia: 't2',
   g: 'painel', gq: '', gform: false, eform: false, alerts: [], audit: [],
   sess: { pais: null, tias: null, gestao: null }, lerr: { familia: null, gestao: null }, lval: { familia: '', gestao: '' },
   notice: null, aform: false, af: 'todos',
-  prefs: { avisos: true, lembretes: true, novidades: false, fotos: false }
+  prefs: { fotos: false }
 };
 const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const now = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-const kid = id => KIDS.find(k => k.id === id);
-const fam = id => FAMS.find(f => f.id === id);
-const room = id => ROOMS.find(r => r.id === id);
+// quando um registro não existe (ou chegou incompleto), a tela mostra um valor neutro em vez de quebrar
+const kid = id => KIDS.find(k => k.id === id) || { id, name: 'Criança não encontrada', age: '', room: '', fam: '', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: '' };
+const fam = id => FAMS.find(f => f.id === id) || { id, name: '?', phone: '', guardians: [] };
+const room = id => ROOMS.find(r => r.id === id) || { id, name: 'Sala não definida', ages: '', cap: 0 };
+const LIVE_MS = 14 * 3600 * 1000;
+// só os avisos do culto de hoje contam; os antigos ficam guardados, mas fora das telas
+const liveAlerts = () => state.alerts.filter(a => !a.at || Date.now() - a.at < LIVE_MS);
+const rnd4 = () => { try { return 1000 + crypto.getRandomValues(new Uint32Array(1))[0] % 9000; } catch (e) { return 1000 + Math.floor(Math.random() * 9000); } };
+const normCode = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const codeOk = (typed, code) => { const t = normCode(typed), c = normCode(code); return !!t && (t === c || (/^\d{4,}$/.test(t) && c.endsWith(t))); };
+const hm = n => { const h = Math.floor(n / 60); return (h ? h + 'h ' : '') + (n % 60) + 'min'; };
 const tia = () => TIAS.find(x => x.id === state.tia);
 const inRoom = id => (cloudOn() && Cloud.useCounts()) ? ((state.counts || {})[id] || 0) : KIDS.filter(k => k.room === id && k.status === 'in').length;
-const kidAlerts = id => state.alerts.filter(a => a.kid === id);
-const first = s => s.split(' (')[0].split(' ')[0];
+const kidAlerts = id => liveAlerts().filter(a => a.kid === id);
+const first = s => String(s || '').split(' (')[0].split(' ')[0];
+const guards = f => Array.isArray(f.guardians) ? f.guardians : [];
 const roomForAge = a => a <= 2 ? 'bercario' : a <= 4 ? 'maternal' : a <= 7 ? 'juniores' : 'kids';
 const ageLabel = a => a < 1 ? 'menos de 1 ano' : a === 1 ? '1 ano' : a + ' anos';
 const mins = t => { const x = t.split(':').map(Number); return x[0] * 60 + x[1]; };
@@ -178,14 +203,14 @@ const IC = {
 };
 
 function doCheckIn(k, by) {
-  k.status = 'in'; k.time = now(); k.out = ''; k.by = by;
+  k.status = 'in'; k.time = now(); k.out = ''; k.by = by; k.day = todayKey();
 }
 
 function statusChip(k) {
   if (k.status === 'left') return '<span class="chip left">Saiu</span>';
   const a = kidAlerts(k.id).slice(-1)[0];
   if (a && a.reply) return '<span class="chip ok">Responsável a caminho</span>';
-  if (a) return '<span class="chip sun">Aviso enviado ' + a.time + '</span>';
+  if (a) return '<span class="chip sun">Aviso enviado ' + esc(a.time) + '</span>';
   return '<span class="chip">Em sala</span>';
 }
 
@@ -200,7 +225,7 @@ function demoCard(app) {
   return '<section class="card"><p class="sec">Contas de exemplo</p>' + list.map(u =>
     '<div class="demo"><div><strong>' + esc(u.name) + '</strong>' + ' <span class="chip">' + ROLES[u.role] + (u.fam && u.role === 'tia' ? ' + família' : '') + '</span>' +
     '<div class="meta">' + esc(u.login || u.phone) + ' · senha ' + esc(u.pass) + (u.active ? '' : ' · desativada') + '</div></div>' +
-    '<button type="button" class="link" data-fill="' + u.id + '">Preencher</button></div>').join('') +
+    '<button type="button" class="link" data-fill="' + esc(u.id) + '">Preencher</button></div>').join('') +
     '<p class="hint">Protótipo com contas de exemplo. No sistema real, a senha é conferida no servidor e nunca aparece na tela.</p></section>';
 }
 
@@ -230,28 +255,28 @@ function appLogin(app) {
 
 /* ================= APP DOS PAIS ================= */
 function tabHome(f, mine) {
-  const ids = mine.map(k => k.id), ev = EVENTS[0];
-  const last = state.alerts.filter(a => ids.includes(a.kid)).slice(-1)[0];
+  const ids = mine.map(k => k.id), ev = upcoming()[0];
+  const last = liveAlerts().filter(a => ids.includes(a.kid)).slice(-1)[0];
   return '<div><h2>Olá! Que bom ter vocês aqui.</h2><p class="sub">Acompanhe a jornada da sua criança.</p></div>' +
     '<div class="tiles"><button type="button" class="tile blue" data-tab="crianca"><strong>Minha criança</strong><span>Acessar</span></button>' +
     '<button type="button" class="tile yel" data-tab="agenda"><strong>Agenda</strong><span>Acessar</span></button></div>' +
-    '<section class="card"><p class="sec">Próximo encontro</p>' + (ev ? '<strong>' + esc(ev.n) + '</strong><span class="meta">' + ev.w + ', ' + ev.day + '/' + (MONTHS.indexOf(ev.mon) + 1) + ' · ' + esc(ev.t) + '</span>' : '<strong>Em breve</strong><span class="meta">A coordenação ainda não publicou o próximo encontro.</span>') + '<span><span class="chip' + (state.open ? ' ok' : ' sun') + '">' + (state.open ? 'Check-in aberto' : 'Check-in começa às 8h30') + '</span></span></section>' +
-    '<section class="card"><p class="sec">Aviso recente</p>' + (last ? '<span class="time">' + last.time + ' · ' + esc(kid(last.kid).name) + '</span><span>' + esc(last.text) + '</span><button type="button" class="btn" data-tab="avisos">Ver avisos</button>' : '<span class="hint">Ainda não há avisos para esta turma.</span>') + '</section>';
+    '<section class="card"><p class="sec">Próximo encontro</p>' + (ev ? '<strong>' + esc(ev.n) + '</strong><span class="meta">' + esc(ev.w) + ', ' + esc(ev.day) + '/' + (MONTHS.indexOf(ev.mon) + 1) + ' · ' + esc(ev.t) + '</span>' : '<strong>Em breve</strong><span class="meta">A coordenação ainda não publicou o próximo encontro.</span>') + '<span><span class="chip' + (state.open ? ' ok' : ' sun') + '">' + (state.open ? 'Check-in aberto' : 'Check-in ainda fechado') + '</span></span></section>' +
+    '<section class="card"><p class="sec">Aviso recente</p>' + (last ? '<span class="time">' + esc(last.time) + ' · ' + esc(kid(last.kid).name) + '</span><span>' + esc(last.text) + '</span><button type="button" class="btn" data-tab="avisos">Ver avisos</button>' : '<span class="hint">Ainda não há avisos para esta turma.</span>') + '</section>';
 }
 
 function tabCrianca(f, mine) {
   const p = state.p;
   const rows = mine.map(k => {
     const can = state.open && k.status === 'out';
-    const info = '<span class="meta">' + room(k.room).name + ' · ' + (k.status === 'in' ? 'em sala desde ' + k.time : k.status === 'left' ? 'saiu às ' + k.out : 'aguardando check-in') + '</span>';
+    const info = '<span class="meta">' + esc(room(k.room).name) + ' · ' + (k.status === 'in' ? 'em sala desde ' + esc(k.time) : k.status === 'left' ? 'saiu às ' + esc(k.out) : 'aguardando check-in') + '</span>';
     return '<div class="krow">' + (can
-      ? '<label><input type="checkbox" data-pick="' + k.id + '"' + (p.sel.includes(k.id) ? ' checked' : '') + '><span>' + esc(k.name) + '<br>' + info + '</span></label>'
+      ? '<label><input type="checkbox" data-pick="' + esc(k.id) + '"' + (p.sel.includes(k.id) ? ' checked' : '') + '><span>' + esc(k.name) + '<br>' + info + '</span></label>'
       : '<div><strong>' + esc(k.name) + '</strong><br>' + info + '</div>') +
-      '<button type="button" class="link" data-detail="' + k.id + '">Detalhes</button></div>';
+      '<button type="button" class="link" data-detail="' + esc(k.id) + '">Detalhes</button></div>';
   }).join('');
   const anyOut = mine.some(k => k.status === 'out');
   const top = !state.open
-    ? '<div class="hero wait">' + IC.clock + '<h2>Ainda não abriu</h2><p>O check-in começa às 8h30. Volte em alguns minutinhos.</p></div>'
+    ? '<div class="hero wait">' + IC.clock + '<h2>Ainda não abriu</h2><p>A equipe ainda não abriu o check-in. Volte em alguns minutinhos.</p></div>'
     : '<p class="hint">' + (anyOut ? 'Marque quem vai para a sala e toque em Fazer check-in.' : 'Tudo certo por aqui. Bom culto!') + '</p>';
   return '<h2>Minha criança</h2>' + top + '<div style="display:grid;gap:10px">' + rows + '</div>' +
     (state.open && anyOut ? '<button type="button" class="btn primary wide" id="doci" data-docheckin' + (p.sel.length ? '' : ' disabled') + '>' + (p.sel.length ? 'Fazer check-in (' + p.sel.length + ')' : 'Fazer check-in') + '</button>' : '');
@@ -259,17 +284,17 @@ function tabCrianca(f, mine) {
 
 function tabAgenda() {
   return '<div><h2>Agenda</h2><p class="sub">Cultos, encontros e orientações.</p></div>' +
-    EVENTS.map(e => '<article class="card ev"><div class="date"><b>' + esc(e.day) + '</b><small>' + esc(e.mon) + '</small></div><div><strong>' + esc(e.n) + '</strong><span class="meta">' + esc(e.w) + ' · ' + esc(e.t) + '</span><span class="meta">' + esc(e.note) + '</span></div></article>').join('');
+    (upcoming().length ? upcoming() : []).map(e => '<article class="card ev"><div class="date"><b>' + esc(e.day) + '</b><small>' + esc(e.mon) + '</small></div><div><strong>' + esc(e.n) + '</strong><span class="meta">' + esc(e.w) + ' · ' + esc(e.t) + '</span><span class="meta">' + esc(e.note) + '</span></div></article>').join('') + (upcoming().length ? '' : '<p class="hint">A coordenação ainda não publicou os próximos encontros.</p>');
 }
 
 function alertCard(a, withBtn) {
-  return '<article class="notif' + (a.reply ? ' done' : '') + '"><div class="time">' + a.time + ' · ' + esc(kid(a.kid).name) + ' · ' + room(kid(a.kid).room).name + (a.by ? ' · ' + esc(a.by) : '') + '</div><p>' + esc(a.text) + '</p>' +
-    (a.reply ? '<span><span class="chip ok">Você respondeu: estou indo</span></span>' : withBtn ? '<button type="button" class="btn primary" data-reply="' + a.id + '">Estou indo</button>' : '') + '</article>';
+  return '<article class="notif' + (a.reply ? ' done' : '') + '"><div class="time">' + esc(a.time) + ' · ' + esc(kid(a.kid).name) + ' · ' + esc(room(kid(a.kid).room).name) + (a.by ? ' · ' + esc(a.by) : '') + '</div><p>' + esc(a.text) + '</p>' +
+    (a.reply ? '<span><span class="chip ok">Você respondeu: estou indo</span></span>' : withBtn ? '<button type="button" class="btn primary" data-reply="' + esc(a.id) + '">Estou indo</button>' : '') + '</article>';
 }
 
 function tabAvisos(mine) {
   const ids = mine.map(k => k.id);
-  const notes = state.alerts.filter(a => ids.includes(a.kid)).slice().reverse();
+  const notes = liveAlerts().filter(a => ids.includes(a.kid)).slice().reverse();
   return '<h2>Avisos</h2>' + (notes.length ? notes.map(a => alertCard(a, true)).join('') : '<p class="hint">Ainda não há avisos para esta turma.</p>');
 }
 
@@ -284,11 +309,11 @@ function screenDetail(k, staff) {
   const f = fam(k.fam), phone = f.phone || '';
   return (k.by ? '<p class="sec">Responsável pelo check-in</p><div class="kv"><div class="full"><strong>' + esc(k.by) + '</strong><small>Telefone ' + esc(phone) + '</small></div></div>' : '<p class="hint">Ainda não houve check-in hoje.</p>') +
     '<div class="care"><strong>Cuidados da criança</strong><span><b>Restrições alimentares:</b> ' + esc(k.note || 'Nenhuma informada') + '</span><span><b>Observações:</b> ' + esc(k.obs || 'Nenhuma') + '</span><span><b>Necessidades específicas:</b> Não informado</span></div>' +
-    (k.status !== 'out' ? '<div class="kv"><div><small>Check-in</small><strong>' + k.time + '</strong></div><div><small>Check-out</small><strong>' + (k.out || 'Ainda na sala') + '</strong></div>' +
+    (k.status !== 'out' ? '<div class="kv"><div><small>Check-in</small><strong>' + esc(k.time) + '</strong></div><div><small>Check-out</small><strong>' + esc(k.out || 'Ainda na sala') + '</strong></div>' +
       '<div class="full"><small>Tempo de permanência</small><strong>' + dur(k.time, k.out || now()) + (k.out ? '' : ' até agora') + '</strong></div>' +
       '<div class="full"><small>Identificação da criança</small><strong>#' + esc(k.code) + '</strong></div></div>' : '') +
     (!staff && k.status === 'in' ? '<div class="pkid"><div><strong>QR Code de retirada</strong><p class="meta" style="margin:4px 0 0">Mostre à equipe na saída.</p></div>' + qr(k.code) + '</div>' : '') +
-    (staff && k.status === 'in' ? '<div class="actions"><button type="button" class="btn hl" data-alert="' + k.id + '">Avisar pais</button><button type="button" class="btn" data-out="' + k.id + '">Check-out</button></div>' : '');
+    (staff && k.status === 'in' ? '<div class="actions"><button type="button" class="btn hl" data-alert="' + esc(k.id) + '">Avisar pais</button><button type="button" class="btn" data-out="' + esc(k.id) + '">Check-out</button></div>' : '');
 }
 
 function cloudPerfil() {
@@ -300,15 +325,14 @@ function cloudPerfil() {
 }
 
 function screenPerfil(f) {
-  const pr = state.prefs;
-  const chk = (key, label, hint, locked) => '<label class="prow"><input type="checkbox" data-pref="' + key + '"' + (pr[key] || locked ? ' checked' : '') + (locked ? ' disabled' : '') + '><span><strong>' + label + '</strong><small>' + hint + '</small></span></label>';
-  return '<div class="kv"><div class="full"><strong>' + esc(f.guardians[0].split(' (')[0]) + '</strong><small>Telefone ' + esc(f.phone) + '</small></div></div>' +
-    '<p class="sec">Pessoas autorizadas a retirar</p><div class="card">' + f.guardians.map(g => '<div>' + esc(g) + '</div>').join('') + '</div>' +
-    '<p class="sec">Notificações</p><div class="card">' + chk('avisos', 'Avisos da equipe', 'Sempre ativo, para a equipe conseguir chamar você durante o culto.', true) + chk('lembretes', 'Lembretes de encontros', 'Um dia antes de cada culto.') + chk('novidades', 'Novidades e conteúdos', 'Novas histórias e conquistas.') + '</div>' +
+  const pr = state.prefs, gl = guards(f), g0 = String(gl[0] || f.name || '');
+  const chk = (key, label, hint) => '<label class="prow"><input type="checkbox" data-pref="' + key + '"' + (pr[key] ? ' checked' : '') + '><span><strong>' + label + '</strong><small>' + hint + '</small></span></label>';
+  return '<div class="kv"><div class="full"><strong>' + esc(g0.split(' (')[0]) + '</strong><small>Telefone ' + esc(f.phone) + '</small></div></div>' +
+    '<p class="sec">Pessoas autorizadas a retirar</p><div class="card">' + (gl.length ? gl.map(g => '<div>' + esc(g) + '</div>').join('') : '<span class="meta">Nenhuma pessoa cadastrada.</span>') + '<p class="hint">Para incluir ou tirar alguém desta lista, fale com a coordenação infantil.</p></div>' +
+    '<p class="sec">Avisos da equipe</p><div class="card"><p class="meta">Sempre ativos: é por eles que a equipe chama você durante o culto.</p></div>' +
     cloudPerfil() +
-    '<p class="sec">Consentimento</p><div class="card">' + chk('fotos', 'Fotos e vídeos', 'Autorizo o uso de imagens da criança em materiais da igreja. Você pode mudar quando quiser.') + '</div>' +
+    '<p class="sec">Consentimento</p><div class="card">' + chk('fotos', 'Fotos e vídeos', 'Autorizo o uso de imagens da criança em materiais da igreja. Você pode mudar quando quiser. A escolha é salva na hora.') + '</div>' +
     '<p class="hint">Usamos os dados apenas para cuidar da criança, conforme a LGPD. Você pode pedir correção ou exclusão à coordenação infantil.</p>' +
-    '<button type="button" class="btn primary wide" data-save>Salvar</button>' +
     '<button type="button" class="btn wide" data-logout>Sair da conta</button>';
 }
 
@@ -318,11 +342,11 @@ function renderParent(me) {
   if (!f) return '<div class="app"><div class="scr"><p class="sub">Carregando os dados da família…</p></div></div>';
   const mine = KIDS.filter(k => k.fam === f.id);
   const ids = mine.map(k => k.id);
-  const unread = state.alerts.filter(a => ids.includes(a.kid) && !a.reply).length;
-  const unseen = state.alerts.filter(a => ids.includes(a.kid) && !a.seen);
+  const unread = liveAlerts().filter(a => ids.includes(a.kid) && !a.reply).length;
+  const unseen = liveAlerts().filter(a => ids.includes(a.kid) && !a.seen);
   let head, body, tabbar = false;
   if (p.screen === 'done') { head = bandLogo(); body = screenDone(); }
-  else if (p.screen === 'detail') { const k = kid(p.card); head = bandBack(esc(k.name), k.age + ' · ' + room(k.room).name); body = screenDetail(k, false); }
+  else if (p.screen === 'detail') { const k = kid(p.card); head = bandBack(esc(k.name), esc(k.age) + ' · ' + esc(room(k.room).name)); body = screenDetail(k, false); }
   else if (p.screen === 'perfil') { head = bandBack('Perfil', 'Família ' + esc(f.name)); body = screenPerfil(f); }
   else {
     tabbar = true; head = bandLogo();
@@ -337,20 +361,20 @@ function renderParent(me) {
 
 /* ================= APP DAS TIAS ================= */
 function kidRow(k) {
-  return '<article class="trow"><div class="row"><div><button type="button" class="link name" data-tkid="' + k.id + '">' + esc(k.name) + '</button><div class="meta">' + k.age + ' · desde ' + k.time + '</div></div>' + statusChip(k) + '</div>' +
+  return '<article class="trow"><div class="row"><div><button type="button" class="link name" data-tkid="' + esc(k.id) + '">' + esc(k.name) + '</button><div class="meta">' + esc(k.age) + ' · desde ' + esc(k.time) + '</div></div>' + statusChip(k) + '</div>' +
     (k.note ? '<div class="note"><b>Atenção:</b> ' + esc(k.note) + '</div>' : '') +
-    '<div class="actions"><button type="button" class="btn hl" data-alert="' + k.id + '">Avisar pais</button><button type="button" class="btn" data-out="' + k.id + '">Check-out</button></div></article>';
+    '<div class="actions"><button type="button" class="btn hl" data-alert="' + esc(k.id) + '">Avisar pais</button><button type="button" class="btn" data-out="' + esc(k.id) + '">Check-out</button></div></article>';
 }
 
 function roomView(rid) {
   const r = room(rid), all = KIDS.filter(k => k.room === rid);
   const inn = all.filter(k => k.status === 'in'), exp = all.filter(k => k.status === 'out'), lf = all.filter(k => k.status === 'left');
   const c = inn.length;
-  return '<div><h2>' + r.name + '</h2><p class="sub">' + r.ages + '</p></div>' +
+  return '<div><h2>' + esc(r.name) + '</h2><p class="sub">' + esc(r.ages) + '</p></div>' +
     '<div class="pills2"><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + ' de ' + r.cap + ' vagas' + (c >= r.cap ? ' · lotada' : '') + '</span><span class="chip ' + (state.open ? 'ok' : 'sun') + '">' + (state.open ? 'Check-in aberto' : 'Check-in fechado') + '</span></div>' +
     '<p class="sec">Em sala</p>' + (inn.length ? inn.map(k => kidRow(k)).join('') : '<p class="hint">Ainda não há crianças nesta sala.</p>') +
-    (exp.length ? '<p class="sec">Esperados</p>' + exp.map(k => '<article class="trow"><div class="row"><div><strong>' + esc(k.name) + '</strong><div class="meta">' + k.age + '</div></div><button type="button" class="btn primary" data-tin="' + k.id + '"' + (state.open && c < r.cap ? '' : ' disabled') + '>Check-in</button></div></article>').join('') : '') +
-    (lf.length ? '<p class="sec">Já saíram</p>' + lf.map(k => '<div class="krow"><div><strong>' + esc(k.name) + '</strong><br><span class="meta">saiu às ' + k.out + '</span></div></div>').join('') : '');
+    (exp.length ? '<p class="sec">Esperados</p>' + exp.map(k => '<article class="trow"><div class="row"><div><strong>' + esc(k.name) + '</strong><div class="meta">' + esc(k.age) + '</div></div><button type="button" class="btn primary" data-tin="' + esc(k.id) + '"' + (state.open && c < r.cap ? '' : ' disabled') + '>Check-in</button></div></article>').join('') : '') +
+    (lf.length ? '<p class="sec">Já saíram</p>' + lf.map(k => '<div class="krow"><div><strong>' + esc(k.name) + '</strong><br><span class="meta">saiu às ' + esc(k.out) + '</span></div></div>').join('') : '');
 }
 
 function renderTia(me) {
@@ -358,15 +382,15 @@ function renderTia(me) {
   const t = tia(), s = state.t;
   if (!t) return '<div class="app"><div class="scr"><p class="sub">Carregando os dados da equipe…</p></div></div>';
   let head, body, tabbar = false;
-  if (s.screen === 'kid') { const k = kid(s.kid); head = bandBack(esc(k.name), k.age + ' · ' + room(k.room).name); body = screenDetail(k, true); }
+  if (s.screen === 'kid') { const k = kid(s.kid); head = bandBack(esc(k.name), esc(k.age) + ' · ' + esc(room(k.room).name)); body = screenDetail(k, true); }
   else if (s.screen === 'room') { head = bandBack(room(s.room).name, 'Visão da sala'); body = roomView(s.room); }
   else {
     tabbar = true; head = bandTia(t);
     if (s.tab === 'salas') {
-      body = '<div><h2>Todas as salas</h2><p class="sub">Toque em uma sala para ver as crianças.</p></div>' + ROOMS.map(r => { const c = inRoom(r.id); return '<button type="button" class="roomcard" data-troom="' + r.id + '"><div class="row"><strong>' + r.name + '</strong><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + '/' + r.cap + (c >= r.cap ? ' · lotada' : '') + '</span></div><span class="meta">' + r.ages + '</span></button>'; }).join('');
+      body = '<div><h2>Todas as salas</h2><p class="sub">Toque em uma sala para ver as crianças.</p></div>' + ROOMS.map(r => { const c = inRoom(r.id); return '<button type="button" class="roomcard" data-troom="' + esc(r.id) + '"><div class="row"><strong>' + esc(r.name) + '</strong><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + '/' + r.cap + (c >= r.cap ? ' · lotada' : '') + '</span></div><span class="meta">' + esc(r.ages) + '</span></button>'; }).join('');
     } else if (s.tab === 'avisos') {
-      const all = state.alerts.slice().reverse();
-      body = '<div><h2>Avisos enviados</h2><p class="sub">Acompanhe quem já respondeu.</p></div>' + (all.length ? all.map(a => '<article class="trow"><div class="time">' + a.time + ' · ' + esc(a.by || 'Equipe') + '</div><div><strong>' + esc(kid(a.kid).name) + '</strong><div>' + esc(a.text) + '</div></div><span>' + (a.reply ? '<span class="chip ok">Responsável a caminho</span>' : '<span class="chip sun">Sem resposta ainda</span>') + '</span></article>').join('') : '<p class="hint">Ainda não há avisos neste culto.</p>');
+      const all = liveAlerts().slice().reverse();
+      body = '<div><h2>Avisos enviados</h2><p class="sub">Acompanhe quem já respondeu.</p></div>' + (all.length ? all.map(a => '<article class="trow"><div class="time">' + esc(a.time) + ' · ' + esc(a.by || 'Equipe') + '</div><div><strong>' + esc(kid(a.kid).name) + '</strong><div>' + esc(a.text) + '</div></div><span>' + (a.reply ? '<span class="chip ok">Responsável a caminho</span>' : '<span class="chip sun">Sem resposta ainda</span>') + '</span></article>').join('') : '<p class="hint">Ainda não há avisos neste culto.</p>');
     } else if (s.tab === 'visitantes') {
       body = visitorsTab();
     } else body = roomView(t.room);
@@ -398,29 +422,53 @@ function renderFamilia() {
 }
 
 /* ================= GESTÃO ================= */
+function staleN() { return KIDS.filter(k => k.status !== 'out' && k.day && k.day !== todayKey()).length; }
+function staleHtml() {
+  const n = staleN(); if (!n) return '';
+  return '<section class="panel notice" role="alert"><div><strong>Culto anterior ainda aberto</strong><p class="meta">' + n + (n > 1 ? ' crianças continuam marcadas' : ' criança continua marcada') + ' como presente(s) de outro dia. Encerre o culto para zerar as salas antes de abrir o check-in de hoje.</p></div></section>';
+}
+// zera as salas, guarda o total do culto e fecha o check-in
+function endService() {
+  const act = KIDS.filter(k => k.status !== 'out');
+  if (!act.length) return false;
+  const ds = act.filter(k => k.time).map(k => Math.max(0, mins(k.out || now()) - mins(k.time)));
+  const dk = (act.find(k => k.day) || {}).day, label = dk ? dk.slice(8) + '/' + dk.slice(5, 7) : todayShort();
+  const row = { d: label, c: act.length, v: act.filter(k => k.visitor).length, avg: ds.length ? hm(Math.round(ds.reduce((x, y) => x + y, 0) / ds.length)) : '—', ts: Date.now() };
+  const prev = state.hist.find(h => h.d === label);
+  if (prev) { prev.c += row.c; prev.v += row.v; prev.avg = row.avg; prev.ts = row.ts; } else state.hist.push(row);
+  act.forEach(k => { k.status = 'out'; k.time = ''; k.out = ''; k.by = ''; k.day = ''; });
+  state.open = false;
+  log(actor(), 'Culto encerrado: ' + row.c + ' crianças, ' + row.v + ' visitantes.');
+  return true;
+}
 function gPainel() {
   const inside = KIDS.filter(k => k.status === 'in').length, entered = KIDS.filter(k => k.status !== 'out').length;
-  const left = KIDS.filter(k => k.status === 'left').length, vis = KIDS.filter(k => k.visitor).length;
+  const left = KIDS.filter(k => k.status === 'left').length, vis = KIDS.filter(k => k.visitor && k.status !== 'out').length;
   const rooms = ROOMS.map(r => {
     const c = inRoom(r.id), tt = TIAS.find(x => x.room === r.id), pct = Math.min(100, Math.round(c / r.cap * 100));
-    return '<article class="rc"><div class="row2"><h3>' + r.name + '</h3><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + '/' + r.cap + (c >= r.cap ? ' · lotada' : '') + '</span></div>' +
-      '<span class="meta">' + r.ages + ' · ' + (tt ? esc(tt.name) : 'Sem tia definida') + '</span><div class="occ" aria-hidden="true"><i class="' + (c >= r.cap ? 'full' : '') + '" style="width:' + pct + '%"></i></div>' +
-      (canManage() ? '<label>Capacidade da sala<input type="number" min="1" max="40" value="' + r.cap + '" data-cap="' + r.id + '"></label>' : '<span class="meta">Capacidade: ' + r.cap + ' crianças</span>') + '</article>';
+    return '<article class="rc"><div class="row2"><h3>' + esc(r.name) + '</h3><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + '/' + r.cap + (c >= r.cap ? ' · lotada' : '') + '</span></div>' +
+      '<span class="meta">' + esc(r.ages) + ' · ' + (tt ? esc(tt.name) : 'Sem tia definida') + '</span><div class="occ" aria-hidden="true"><i class="' + (c >= r.cap ? 'full' : '') + '" style="width:' + pct + '%"></i></div>' +
+      (canManage() ? '<label>Capacidade da sala<input type="number" min="1" max="40" value="' + r.cap + '" data-cap="' + esc(r.id) + '"></label>' : '<span class="meta">Capacidade: ' + r.cap + ' crianças</span>') + '</article>';
   }).join('');
   return '<section class="stats" aria-label="Contagem"><div class="stat main"><b>' + inside + '</b><span>em sala agora</span></div><div class="stat"><b>' + entered + '</b><span>entraram</span></div><div class="stat"><b>' + left + '</b><span>já saíram</span></div><div class="stat"><b>' + vis + '</b><span>visitantes</span></div></section>' +
-    '<section class="panel"><div class="vqrow"><div><h2>Check-in do culto</h2><p class="meta">Culto infantil · domingo, 08/11 · 9h. ' + (state.open ? 'As famílias já podem fazer check-in.' : 'As famílias ainda não conseguem entrar.') + '</p><button type="button" class="btn ' + (state.open ? '' : 'hl') + '" data-toggle>' + (state.open ? 'Check-in aberto · fechar' : 'Check-in fechado · abrir') + '</button></div></div></section>' +
+    '<section class="panel"><div class="vqrow"><div><h2>Check-in do culto</h2><p class="meta">Culto infantil · ' + esc(todayLong()) + '. ' + (state.open ? 'As famílias já podem fazer check-in.' : 'As famílias ainda não conseguem entrar.') + '</p><div class="actions"><button type="button" class="btn ' + (state.open ? '' : 'hl') + '" data-toggle>' + (state.open ? 'Check-in aberto · fechar' : 'Check-in fechado · abrir') + '</button><button type="button" class="btn" data-endservice>Encerrar culto</button></div><p class="meta">Ao encerrar, as salas zeram, o check-in fecha e o total do dia vai para os relatórios.</p></div></div></section>' + staleHtml() +
     '<h2>Salas</h2><div class="rcards rooms">' + rooms + '</div>' +
     '<section class="panel"><div class="vqrow">' + qr(visitorUrl()) + '<div><h2>QR Code para visitantes</h2><p class="meta">Imprima e fixe na entrada. O visitante aponta a câmera do celular e faz o check-in sozinho, sem baixar nada. A equipe também tem este QR Code no app, na aba Visitantes.</p><a class="btn" href="' + esc(visitorUrl()) + '" target="_blank" rel="noopener">Abrir página do visitante</a></div></div></section>';
 }
 
+const RELS = ['mãe', 'pai', 'avó', 'avô', 'tio', 'tia', 'madrinha', 'padrinho', 'outro responsável'];
 function famCards() {
   const q = state.gq.trim().toLowerCase();
-  const list = FAMS.filter(f => !q || (f.name + ' ' + f.guardians.join(' ') + ' ' + KIDS.filter(k => k.fam === f.id).map(k => k.name).join(' ')).toLowerCase().includes(q));
+  const list = FAMS.filter(f => !q || (f.name + ' ' + guards(f).join(' ') + ' ' + KIDS.filter(k => k.fam === f.id).map(k => k.name).join(' ')).toLowerCase().includes(q));
   return list.length ? list.map(f => {
-    const ks = KIDS.filter(k => k.fam === f.id);
-    return '<article class="rc"><div class="row2"><h3>Família ' + esc(f.name) + '</h3>' + (f.visitor ? '<span class="chip sun">Visitante</span>' : '') + '</div><span class="meta">Telefone ' + esc(f.phone) + '</span>' +
-      '<div><p class="sec">Autorizados a retirar</p>' + f.guardians.map(g => '<div>' + esc(g) + '</div>').join('') + '</div>' +
-      '<div><p class="sec">Crianças</p>' + ks.map(k => '<div>' + esc(k.name) + ' <span class="meta">· ' + k.age + ' · ' + room(k.room).name + '</span></div>').join('') + '</div></article>';
+    const ks = KIDS.filter(k => k.fam === f.id), ed = state.fedit === f.id, gl = guards(f), fid = esc(f.id);
+    const acc = USERS.find(u => u.fam === f.id && u.role === 'pais'), ph = acc && acc.prefs ? (acc.prefs.fotos ? '<span class="chip ok">Fotos autorizadas</span>' : '<span class="chip left">Fotos não autorizadas</span>') : '';
+    const form = ed ? '<form class="form inline" id="ga" data-fid="' + fid + '" autocomplete="off"><p class="sec">Incluir pessoa autorizada</p><label>Nome completo<input type="text" id="ga-n" maxlength="80"></label><label>Quem é<select id="ga-r">' + RELS.map(r => '<option>' + r + '</option>').join('') + '</select></label><button type="submit" class="btn primary">Incluir</button></form>' +
+      '<form class="form inline" id="ka" data-fid="' + fid + '" autocomplete="off"><p class="sec">Incluir criança</p><label>Nome<input type="text" id="ka-n" maxlength="80"></label><label>Idade<select id="ka-a">' + ageOpts(3) + '</select></label><label>Alergias ou cuidados<input type="text" id="ka-o" maxlength="300" placeholder="Opcional"></label><button type="submit" class="btn primary">Incluir</button></form>' : '';
+    return '<article class="rc"><div class="row2"><h3>Família ' + esc(f.name) + '</h3>' + (f.visitor ? '<span class="chip sun">Visitante</span>' : '') + '</div><span class="meta">Telefone ' + esc(f.phone) + '</span>' + (ph ? '<span>' + ph + '</span>' : '') +
+      '<div><p class="sec">Autorizados a retirar</p>' + gl.map((g, i) => '<div>' + esc(g) + (ed && gl.length > 1 ? ' <button type="button" class="link" data-grm="' + fid + ':' + i + '">Remover</button>' : '') + '</div>').join('') + '</div>' +
+      '<div><p class="sec">Crianças</p>' + ks.map(k => '<div>' + esc(k.name) + ' <span class="meta">· ' + esc(k.age) + ' · ' + esc(room(k.room).name) + '</span>' + (k.note ? '<div class="meta">Atenção: ' + esc(k.note) + '</div>' : '') + '</div>').join('') + '</div>' +
+      '<button type="button" class="btn sm" data-fedit="' + fid + '">' + (ed ? 'Fechar edição' : 'Editar cadastro') + '</button>' + form + '</article>';
   }).join('') : '<div class="empty">Nenhuma família encontrada.</div>';
 }
 
@@ -432,31 +480,34 @@ function gFamilias() {
 }
 
 function gEquipe() {
-  const rows = TIAS.map(x => { const acc = USERS.find(u => u.tia === x.id), on = !acc || acc.active; return '<article class="rc"><div class="row2"><h3>' + esc(x.name) + '</h3><span class="chip ' + (on ? 'ok' : 'left') + '">' + (on ? 'Ativa hoje' : 'Acesso desativado') + '</span></div><label>Sala de hoje<select data-tiaroom="' + x.id + '">' + ROOMS.map(r => '<option value="' + r.id + '"' + (r.id === x.room ? ' selected' : '') + '>' + r.name + '</option>').join('') + '</select></label></article>'; }).join('');
+  const rows = TIAS.map(x => { const acc = USERS.find(u => u.tia === x.id), on = !acc || acc.active; return '<article class="rc"><div class="row2"><h3>' + esc(x.name) + '</h3><span class="chip ' + (on ? 'ok' : 'left') + '">' + (on ? 'Ativa hoje' : 'Acesso desativado') + '</span></div><label>Sala de hoje<select data-tiaroom="' + esc(x.id) + '">' + ROOMS.map(r => '<option value="' + esc(r.id) + '"' + (r.id === x.room ? ' selected' : '') + '>' + esc(r.name) + '</option>').join('') + '</select></label></article>'; }).join('');
   const roles = [['App dos pais', 'Responsável', 'Ver os próprios filhos, fazer check-in, receber avisos, responder “estou indo” e ver a agenda.'], ['App das tias', 'Equipe de sala', 'Ver as salas, fazer check-in e check-out, ler cuidados da criança e enviar avisos aos pais.'], ['Gestão · Recepção', 'Recepção', 'Ver o painel, cadastrar famílias e abrir o check-in.'], ['Gestão · Coordenação', 'Coordenação', 'Tudo da recepção, mais equipe, capacidade das salas, agenda e relatórios.'], ['Gestão · Administrador', 'Administrador', 'Tudo da coordenação, mais acessos e registro de ações.']];
   return '<div><h2>Equipe</h2><p class="sub">Defina em que sala cada tia está hoje. O app dela já abre na sala certa.</p></div><div class="rcards">' + rows + '</div>' +
     '<h2>Funções e acessos</h2><div class="rcards">' + roles.map(r => '<article class="rc"><h3>' + r[0] + '</h3><span class="chip" style="justify-self:start">' + r[1] + '</span><span>' + r[2] + '</span></article>').join('') + '</div>';
 }
 
 function gAgenda() {
-  const form = state.eform ? '<form class="form inline" id="ne" autocomplete="off"><label>Data (dia/mês)<input type="text" id="ne-d" placeholder="29/11"></label><label>Dia da semana<select id="ne-w">' + ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map(x => '<option>' + x + '</option>').join('') + '</select></label><label>Horário<input type="text" id="ne-t" placeholder="9h"></label><label>Título<input type="text" id="ne-n" placeholder="Culto infantil"></label><label>Observação<input type="text" id="ne-o" placeholder="Opcional"></label><button type="submit" class="btn primary">Salvar evento</button></form>' : '';
-  return '<div class="head" style="margin:0"><div><h2>Agenda</h2><p class="sub">O que você publicar aparece no app dos pais.</p></div><button type="button" class="btn primary" data-eform>' + (state.eform ? 'Fechar formulário' : 'Novo evento') + '</button></div>' + form +
-    '<div class="rcards">' + EVENTS.map(e => '<article class="rc ev" style="grid-template-columns:auto 1fr;display:grid;align-items:center;gap:14px"><div class="date"><b>' + esc(e.day) + '</b><small>' + esc(e.mon) + '</small></div><div><strong>' + esc(e.n) + '</strong><span class="meta">' + esc(e.w) + ' · ' + esc(e.t) + '</span><span class="meta">' + esc(e.note) + '</span></div></article>').join('') + '</div>';
+  const form = state.eform ? '<form class="form inline" id="ne" autocomplete="off"><label>Data (dia/mês)<input type="text" id="ne-d" placeholder="29/11" inputmode="numeric" maxlength="5"></label><label>Horário<input type="text" id="ne-t" placeholder="9h" maxlength="12"></label><label>Título<input type="text" id="ne-n" placeholder="Culto infantil" maxlength="80"></label><label>Observação<input type="text" id="ne-o" placeholder="Opcional" maxlength="200"></label><button type="submit" class="btn primary">Salvar evento</button></form>' : '';
+  const t0 = startOfToday().getTime(), all = EVENTS.slice().sort((a, b) => evTs(a) - evTs(b));
+  const list = all.filter(e => evTs(e) >= t0).concat(all.filter(e => evTs(e) < t0).slice(-5).reverse());
+  return '<div class="head" style="margin:0"><div><h2>Agenda</h2><p class="sub">O que você publicar aparece no app dos pais. Eventos que já passaram saem da agenda deles.</p></div><button type="button" class="btn primary" data-eform>' + (state.eform ? 'Fechar formulário' : 'Novo evento') + '</button></div>' + form +
+    (list.length ? '' : '<p class="hint">Nenhum evento cadastrado ainda.</p>') +
+    '<div class="rcards">' + list.map(e => '<article class="rc ev" style="grid-template-columns:auto 1fr;display:grid;align-items:center;gap:14px"><div class="date"><b>' + esc(e.day) + '</b><small>' + esc(e.mon) + '</small></div><div><strong>' + esc(e.n) + '</strong>' + (evTs(e) < t0 ? ' <span class="chip left">Já passou</span>' : '') + '<span class="meta">' + esc(e.w) + ' · ' + esc(e.t) + '</span><span class="meta">' + esc(e.note) + '</span></div></article>').join('') + '</div>';
 }
 
 function gRelatorios() {
-  const entered = KIDS.filter(k => k.status !== 'out').length, vis = KIDS.filter(k => k.visitor).length;
-  const rows = [{ d: '08/11 (hoje)', c: entered, v: vis, avg: 'em andamento' }].concat(PAST);
+  const entered = KIDS.filter(k => k.status !== 'out').length, vis = KIDS.filter(k => k.visitor && k.status !== 'out').length;
+  const rows = [{ d: todayShort() + ' (hoje)', c: entered, v: vis, avg: 'em andamento' }].concat(state.hist.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 12), cloudOn() ? [] : PAST);
   const max = Math.max(50, ...rows.map(r => r.c));
-  return '<div><h2>Relatórios</h2><p class="sub">Presença por culto. Os cultos anteriores são dados de exemplo.</p></div>' +
+  return '<div><h2>Relatórios</h2><p class="sub">Presença por culto. ' + (cloudOn() ? 'O total de cada culto é guardado quando você usa Encerrar culto, no painel.' : 'Os cultos anteriores são dados de exemplo.') + '</p></div>' +
     '<div class="tbl"><table><thead><tr><th>Culto</th><th>Check-ins</th><th></th><th>Visitantes</th><th>Permanência média</th></tr></thead><tbody>' +
-    rows.map(r => '<tr><td>' + r.d + '</td><td>' + r.c + '</td><td><div class="bar2" aria-hidden="true"><i style="width:' + Math.round(r.c / max * 100) + '%"></i></div></td><td>' + r.v + '</td><td>' + r.avg + '</td></tr>').join('') + '</tbody></table></div>';
+    rows.map(r => '<tr><td>' + esc(r.d) + '</td><td>' + (+r.c || 0) + '</td><td><div class="bar2" aria-hidden="true"><i style="width:' + Math.round(r.c / max * 100) + '%"></i></div></td><td>' + (+r.v || 0) + '</td><td>' + esc(r.avg) + '</td></tr>').join('') + '</tbody></table></div>';
 }
 
 function gRegistro() {
   const rows = state.audit.slice().reverse();
   return '<div><h2>Registro de ações</h2><p class="sub">Quem fez o quê, para dar transparência e segurança ao cuidado das crianças.</p></div>' +
-    '<section class="panel">' + (rows.length ? '<ul class="log">' + rows.map(a => '<li><span class="time">' + a.t + '</span><b>' + esc(a.who) + '</b><span>' + esc(a.text) + '</span></li>').join('') + '</ul>' : '<p class="hint">Ainda não há ações registradas.</p>') + '</section>';
+    '<section class="panel">' + (rows.length ? '<ul class="log">' + rows.map(a => '<li><span class="time">' + esc(a.t) + '</span><b>' + esc(a.who) + '</b><span>' + esc(a.text) + '</span></li>').join('') + '</ul>' : '<p class="hint">Ainda não há ações registradas.</p>') + '</section>';
 }
 
 function noticeHtml() {
@@ -464,16 +515,16 @@ function noticeHtml() {
   return '<section class="panel notice" role="status"><div><strong>' + esc(n.title) + '</strong><p class="meta">' + esc(n.text) + '</p></div><button type="button" class="btn sm" data-ndismiss>Entendi</button></section>';
 }
 
-const famOpts = sel => FAMS.filter(f => !f.visitor).map(f => '<option value="' + f.id + '"' + (f.id === sel ? ' selected' : '') + '>Família ' + esc(f.name) + '</option>').join('');
+const famOpts = sel => FAMS.filter(f => !f.visitor).map(f => '<option value="' + esc(f.id) + '"' + (f.id === sel ? ' selected' : '') + '>Família ' + esc(f.name) + '</option>').join('');
 
 function gAcessos() {
   const me = sessUser('gestao'), f = state.af;
   const list = USERS.filter(u => !u.replaced).filter(u => f === 'todos' || (f === 'pais' && u.role === 'pais') || (f === 'tias' && u.role === 'tia') || (f === 'gestao' && STAFF_ROLES.includes(u.role)));
   const pills = [['todos', 'Todos'], ['pais', 'Pais'], ['tias', 'Tias'], ['gestao', 'Gestão']].map(x => '<button type="button" data-af="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>').join('');
-  const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('') + '</select></label><label>Também é responsável por uma família (só para tias)<select id="na-f"><option value="">Nenhuma</option>' + famOpts('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
-  const rows = list.map(u => '<tr><td>' + esc(u.name) + '</td><td>' + ROLES[u.role] + (u.role === 'tia' ? '<select class="mini" data-ulink="' + u.id + '" aria-label="Família de ' + esc(u.name) + '"><option value="">Sem família</option>' + famOpts(u.fam) + '</select>' : '') + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
-    (u.id === me.id ? '<span class="meta">Você</span>' : '<button type="button" class="btn sm" data-utoggle="' + u.id + '">' + (u.active ? 'Desativar' : 'Reativar') + '</button>') +
-    '<button type="button" class="btn sm" data-ureset="' + u.id + '">Redefinir senha</button></div></td></tr>').join('');
+  const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>').join('') + '</select></label><label>Também é responsável por uma família (só para tias)<select id="na-f"><option value="">Nenhuma</option>' + famOpts('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
+  const rows = list.map(u => '<tr><td>' + esc(u.name) + '</td><td>' + ROLES[u.role] + (u.role === 'tia' ? '<select class="mini" data-ulink="' + esc(u.id) + '" aria-label="Família de ' + esc(u.name) + '"><option value="">Sem família</option>' + famOpts(u.fam) + '</select>' : '') + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
+    (u.id === me.id ? '<span class="meta">Você</span>' : '<button type="button" class="btn sm" data-utoggle="' + esc(u.id) + '">' + (u.active ? 'Desativar' : 'Reativar') + '</button>') +
+    '<button type="button" class="btn sm" data-ureset="' + esc(u.id) + '">Redefinir senha</button></div></td></tr>').join('');
   return noticeHtml() + '<div class="head" style="margin:0"><div><h2>Acessos</h2><p class="sub">Quem pode entrar em cada app. Desativar uma conta tira a pessoa do app na hora.</p></div><button type="button" class="btn primary" data-aform>' + (state.aform ? 'Fechar formulário' : 'Novo acesso') + '</button></div>' + form +
     '<div class="pills" role="group" aria-label="Filtrar acessos">' + pills + '</div>' +
     '<div class="tbl"><table><thead><tr><th>Nome</th><th>Perfil</th><th>Login</th><th>Estado</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
@@ -492,9 +543,9 @@ function renderGestao() {
 /* ================= VISITANTE ================= */
 function renderVisitor() {
   if (state.visit) {
-    const k = kid(state.visit), f = fam(k.fam), g = first(f.guardians[0]);
+    const k = kid(state.visit), f = fam(k.fam), g = first(guards(f)[0]);
     const als = kidAlerts(k.id).slice().reverse();
-    return '<div class="phone"><div><h1>Tudo certo, ' + esc(g) + '!</h1><p class="sub">' + esc(k.name) + ' já está na sala ' + room(k.room).name + '. Sejam bem-vindos!</p></div>' +
+    return '<div class="phone"><div><h1>Tudo certo, ' + esc(g) + '!</h1><p class="sub">' + esc(k.name) + ' já está na sala ' + esc(room(k.room).name) + '. Sejam bem-vindos!</p></div>' +
       '<section class="pkid"><div><h3>QR Code de retirada</h3><p class="meta">Mostre este código à equipe na saída. Só quem fez o cadastro pode retirar a criança.</p></div>' + qr(k.code) + '</section>' +
       '<p class="meta">Deixe esta página aberta durante o culto. Se a equipe precisar de você, o aviso aparece aqui e, se você permitir notificações no navegador, também chega como notificação. Você não precisou baixar nenhum aplicativo.</p>' +
       '<p class="sec">Avisos da equipe</p>' + (als.length ? als.map(a => alertCard(a, true)).join('') : '<p class="hint">Ainda não há avisos.</p>') +
@@ -511,21 +562,27 @@ function renderVisitor() {
     '<button type="submit" class="btn primary wide">Fazer check-in</button></form></div>';
 }
 
+let submitting = false;
 function submitVisitor() {
+  if (submitting) return;
   const g = $('#v-g').value.trim(), p = $('#v-p').value.trim(), n = $('#v-n').value.trim(), a = +$('#v-a').value, note = $('#v-note').value.trim();
   if (!state.open) { toast('O check-in ainda não abriu. Aguarde a equipe.'); return; }
   if (!g || !p || !n) { toast('Preencha seu nome, o telefone e o nome da criança.'); return; }
+  if (digits(p).length < 8) { toast('Informe um telefone válido, com DDD.'); return; }
+  if (g.length > 80 || n.length > 80 || p.length > 30 || note.length > 300) { toast('Algum campo está grande demais. Resuma o texto.'); return; }
   if (!$('#v-ok').checked) { toast('Marque a autorização para continuar.'); return; }
   const rid = roomForAge(a);
   if (inRoom(rid) >= room(rid).cap) { toast(room(rid).name + ' está lotada. Fale com a equipe na entrada.'); return; }
   const go = () => {
     const owner = cloudOn() ? Cloud.uid() : undefined, fid = 'v' + uid8();
     FAMS.push({ id: fid, name: g, visitor: true, owner, phone: p, guardians: [g + ' (responsável)'] });
-    const k = { id: 'kv' + uid8(), name: n, age: ageLabel(a), room: rid, fam: fid, owner, note, obs: '', status: 'in', time: now(), out: '', by: g, code: 'VIS-' + (1000 + Math.floor(Math.random() * 9000)), visitor: true };
-    KIDS.push(k); state.visit = k.id; log('Visitante', 'Check-in de ' + n + ' (' + room(rid).name + ').'); render();
+    const k = { id: 'kv' + uid8(), name: n, age: ageLabel(a), room: rid, fam: fid, owner, note, obs: '', status: 'in', time: now(), out: '', by: g, code: 'VIS-' + rnd4(), visitor: true, day: todayKey() };
+    KIDS.push(k); state.visit = k.id; log('Visitante', 'Check-in de ' + n + ' (' + room(rid).name + ').'); submitting = false; render();
     toast('Check-in feito. A equipe já viu ' + n.split(' ')[0] + ' na lista.');
   };
-  if (cloudOn()) Cloud.ensureAnon().then(go).catch(() => toast('Sem conexão. Tente de novo em instantes.')); else go();
+  submitting = true;
+  const btn = document.querySelector('#vf [type=submit]'); if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  if (cloudOn()) Cloud.ensureAnon().then(go).catch(() => { submitting = false; if (btn) { btn.disabled = false; btn.textContent = 'Fazer check-in'; } toast('Sem conexão. Tente de novo em instantes.'); }); else go();
 }
 
 function renderSheet() {
@@ -534,15 +591,18 @@ function renderSheet() {
   if (s.type === 'alert') {
     const q = QUICK.map(x => '<button type="button" data-quick="' + x.key + '" aria-pressed="' + (s.key === x.key) + '">' + x.label + '</button>').join('');
     return '<div class="overlay" data-close><div class="sheet" role="dialog" aria-modal="true" aria-label="Avisar pais" data-sheet>' +
-      '<h2>Avisar pais de ' + esc(k.name) + '</h2><p class="meta">Vai por notificação para: ' + (f.visitor ? esc(f.guardians[0].split(' (')[0]) + ' (página do visitante)' : f.guardians.filter(g => !/avó|madrinha/.test(g)).map(g => esc(g.split(' (')[0])).join(' e ')) + '</p>' +
+      '<h2>Avisar pais de ' + esc(k.name) + '</h2><p class="meta">Vai por notificação para ' + (f.visitor ? esc(first(guards(f)[0])) + ' (página do visitante)' : 'a família ' + esc(f.name) + ' (quem tem o app instalado e logado)') + '</p>' +
       '<div class="quick">' + q + '</div><textarea id="msg" rows="3" aria-label="Mensagem" placeholder="Escreva a mensagem">' + esc(s.text) + '</textarea>' +
       '<div class="actions"><button type="button" class="btn primary" data-send>Enviar aviso</button><button type="button" class="btn" data-cancel>Cancelar</button></div></div></div>';
   }
-  const opts = f.guardians.map((g, i) => '<label><input type="radio" name="who" value="' + i + '"' + (s.who === String(i) ? ' checked' : '') + '>' + esc(g) + '</label>').join('') +
+  const opts = guards(f).map((g, i) => '<label><input type="radio" name="who" value="' + i + '"' + (s.who === String(i) ? ' checked' : '') + '>' + esc(g) + '</label>').join('') +
     '<label><input type="radio" name="who" value="x"' + (s.who === 'x' ? ' checked' : '') + '>Outra pessoa, não cadastrada</label>';
   return '<div class="overlay" data-close><div class="sheet" role="dialog" aria-modal="true" aria-label="Check-out" data-sheet>' +
-    '<h2>Check-out de ' + esc(k.name) + '</h2><p class="meta">Quem está retirando a criança? Só pessoas autorizadas na ficha da família podem levar.</p>' +
+    '<h2>Check-out de ' + esc(k.name) + '</h2><p class="meta">Quem está retirando a criança? Só pessoas autorizadas na ficha da família podem levar. Peça o QR Code de retirada do app e digite o código.</p>' +
     '<div class="opts">' + opts + '</div>' + (s.blocked ? '<div class="block">Atenção: pessoa não autorizada. Chame o responsável pelo aviso e não libere a criança.</div>' : '') +
+    '<label class="form">Código de retirada<input type="text" id="outcode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ex.: 4821" value="' + esc(s.code || '') + '"></label>' +
+    (s.codeErr ? '<div class="block" role="alert">O código não confere com o desta criança. Peça para o responsável abrir o QR Code no app. Se ele estiver sem o código, confira o documento e marque a opção abaixo.</div>' : '') +
+    '<label class="check"><input type="checkbox" id="nocode"' + (s.nocode ? ' checked' : '') + '><span>O responsável está sem o código, mas conferi o documento dele.</span></label>' +
     '<div class="actions"><button type="button" class="btn primary" data-confirm>Confirmar saída</button><button type="button" class="btn" data-cancel>Cancelar</button></div></div></div>';
 }
 
@@ -576,7 +636,7 @@ document.addEventListener('click', e => {
       else toast('Digite seu e-mail acima. Quem entra com telefone deve pedir uma nova senha à coordenação.');
       return;
     }
-    toast('Se este acesso existir, a coordenação recebe o pedido para redefinir a senha.'); return;
+    toast('Peça uma nova senha à coordenação infantil.'); return;
   }
   if ('logout' in d) return logout();
   if ('ndismiss' in d) { state.notice = null; return render(); }
@@ -602,25 +662,38 @@ document.addEventListener('click', e => {
     state.notice = { title: 'Senha redefinida para ' + u.name, text: 'Nova senha provisória: ' + u.pass + '. No sistema real, a pessoa recebe um link para criar uma nova senha.' };
     return render();
   }
-  if ('toggle' in d) { state.open = !state.open; log(actor(), state.open ? 'Check-in aberto para o culto.' : 'Check-in fechado.'); render(); toast(state.open ? 'Check-in aberto. As famílias já podem entrar.' : 'Check-in fechado.'); return; }
+  if ('endservice' in d) {
+    const still = KIDS.filter(k => k.status === 'in').length;
+    if (!KIDS.some(k => k.status !== 'out')) { toast('Ainda não há check-ins para encerrar.'); return; }
+    if (!window.confirm('Encerrar o culto?' + (still ? ' ' + still + (still > 1 ? ' crianças ainda estão em sala.' : ' criança ainda está em sala.') : '') + ' As salas zeram, o check-in fecha e o total do dia vai para os relatórios.')) return;
+    endService(); render(); toast('Culto encerrado. O total foi para os relatórios.'); return;
+  }
+  if ('toggle' in d) { if (!state.open && staleN()) endService(); state.open = !state.open; log(actor(), state.open ? 'Check-in aberto para o culto.' : 'Check-in fechado.'); render(); toast(state.open ? 'Check-in aberto. As famílias já podem entrar.' : 'Check-in fechado.'); return; }
   if (d.gs) { state.g = d.gs; state.notice = null; return render(); }
+  if (d.fedit) { state.fedit = state.fedit === d.fedit ? null : d.fedit; return render(); }
+  if (d.grm) {
+    const [fid, ix] = d.grm.split(':'), f = FAMS.find(x => x.id === fid), i = +ix;
+    if (!f || !guards(f)[i] || guards(f).length < 2) return;
+    if (!window.confirm('Tirar ' + guards(f)[i].split(' (')[0] + ' da lista de quem pode retirar a criança?')) return;
+    const gone = f.guardians.splice(i, 1)[0]; log(actor(), 'Removeu ' + gone.split(' (')[0] + ' dos autorizados da família ' + f.name + '.'); render(); toast('Pessoa removida da lista.'); return;
+  }
   if ('gform' in d) { state.gform = !state.gform; return render(); }
   if ('eform' in d) { state.eform = !state.eform; return render(); }
   if (d.tab) { p.tab = d.tab; p.screen = null; if (d.tab === 'avisos') markSeen(); return render(); }
   if ('pushopen' in d) { markSeen(); p.tab = 'avisos'; p.screen = null; return render(); }
   if ('pushclose' in d) { markSeen(); return render(); }
-  if ('back' in d) { (state.sess.tias ? ts : p).screen = null; return render(); }
+  if ('back' in d) { const tu = sessUser('tias'), inFam = !!(tu && tu.fam && state.mode === 'familia'); ((tu && !inFam) ? ts : p).screen = null; return render(); }
   if (d.mode) { state.mode = d.mode; state.p = newP(); state.t = newT(); return render(); }
   if ('perfil' in d) { p.screen = 'perfil'; return render(); }
-  if ('save' in d) { toast('Cadastro atualizado.'); return; }
   if (d.detail) { p.screen = 'detail'; p.card = d.detail; return render(); }
   if (d.ckid) { p.ckid = d.ckid; return render(); }
   if ('docheckin' in d) {
     const f = fam(state.fam), ok = [], full = [];
     p.sel.forEach(id => {
       const k = kid(id);
+      if (k.status !== 'out') return;
       if (inRoom(k.room) >= room(k.room).cap) { full.push(k.name.split(' ')[0]); return; }
-      doCheckIn(k, f.guardians[0].split(' (')[0]);
+      doCheckIn(k, ((sessUser('pais') || sessUser('tias') || {}).name) || first(guards(f)[0]));
       log('Família ' + f.name, 'Check-in de ' + k.name + ' (' + room(k.room).name + ').');
       ok.push(k.id);
     });
@@ -634,7 +707,7 @@ document.addEventListener('click', e => {
   if (d.tin) {
     const k = kid(d.tin), f = fam(k.fam);
     if (inRoom(k.room) >= room(k.room).cap) { toast(room(k.room).name + ' está lotada. Chame um apoio antes de continuar.'); return; }
-    doCheckIn(k, f.guardians[0].split(' (')[0]); log(tia().name, 'Check-in de ' + k.name + ' (' + room(k.room).name + ').'); render();
+    doCheckIn(k, first(guards(f)[0])); log(tia().name, 'Check-in de ' + k.name + ' (' + room(k.room).name + ').'); render();
     toast('Check-in de ' + k.name.split(' ')[0] + ' feito.'); return;
   }
   if (d.alert) { state.sheet = { type: 'alert', kid: d.alert, key: null, text: '' }; return render(); }
@@ -657,15 +730,23 @@ document.addEventListener('click', e => {
     toast('Notificação enviada aos responsáveis de ' + k.name.split(' ')[0]); return;
   }
   if ('confirm' in d) {
-    const s = state.sheet, pick = document.querySelector('input[name="who"]:checked');
+    const s = state.sheet, pick = document.querySelector('input[name="who"]:checked'), ci = $('#outcode'), nc = $('#nocode');
+    s.code = ci ? ci.value.trim() : ''; s.nocode = !!(nc && nc.checked);
     if (!pick) { toast('Escolha quem está retirando a criança.'); return; }
     s.who = pick.value;
-    if (pick.value === 'x') { s.blocked = true; render(); return; }
-    const k = kid(s.kid); k.status = 'left'; k.out = now(); state.sheet = null;
-    log(tia().name, 'Check-out de ' + k.name + ' com ' + fam(k.fam).guardians[+pick.value].split(' (')[0] + '.'); render();
-    toast(k.name.split(' ')[0] + ' saiu com ' + fam(k.fam).guardians[+pick.value].split(' (')[0]); return;
+    if (pick.value === 'x') { s.blocked = true; s.codeErr = false; render(); return; }
+    s.blocked = false;
+    const k = kid(s.kid), g = guards(fam(k.fam))[+pick.value];
+    if (!g) { toast('Escolha quem está retirando a criança.'); return; }
+    const byCode = codeOk(s.code, k.code);
+    if (!byCode && !s.nocode) { s.codeErr = true; render(); return; }
+    if (k.status !== 'in') { state.sheet = null; render(); toast('Esta criança já não está em sala.'); return; }
+    const gn = g.split(' (')[0];
+    k.status = 'left'; k.out = now(); state.sheet = null;
+    log(tia().name, 'Check-out de ' + k.name + ' com ' + gn + (byCode ? ' (código conferido).' : ' (sem código, documento conferido).')); render();
+    toast(k.name.split(' ')[0] + ' saiu com ' + gn); return;
   }
-  if (d.reply) { const a = state.alerts.find(x => x.id === d.reply); a.reply = true; a.seen = true; render(); toast('A equipe foi avisada de que você está indo.'); return; }
+  if (d.reply) { const a = state.alerts.find(x => x.id === d.reply); if (!a) return; a.reply = true; a.seen = true; render(); toast('A equipe foi avisada de que você está indo.'); return; }
 });
 document.addEventListener('submit', e => {
   const id = e.target.id;
@@ -740,7 +821,7 @@ document.addEventListener('submit', e => {
       FAMS.push({ id: fid, name: s, phone: ph, guardians: [g + ' (responsável)'] });
       if (local) USERS.push({ id: 'u' + uid8(), role: 'pais', name: g, login: '', phone: ph, pass: pw, active: true, fam: fid });
       state.notice = { title: 'Acesso criado para a família ' + s, text: 'O responsável entra com o telefone ' + ph + ' e a senha provisória ' + pw + '. ' + (local ? 'No sistema real, ele recebe um convite e cria a própria senha.' : 'Anote agora: ela não aparece de novo. Ele pode trocar a senha em Perfil.') };
-      KIDS.push({ id: 'kf' + uid8(), name: n + ' ' + s, age: ageLabel(a), room: rid, fam: fid, note: o, obs: '', status: 'out', time: '', out: '', by: '', code: 'CAD-' + (1000 + Math.floor(Math.random() * 9000)) });
+      KIDS.push({ id: 'kf' + uid8(), name: n + ' ' + s, age: ageLabel(a), room: rid, fam: fid, note: o, obs: '', status: 'out', time: '', out: '', by: '', code: 'CAD-' + rnd4() });
       log(actor(), 'Cadastro da família ' + s + ' (' + n + ', ' + room(rid).name + ').');
       state.gform = false; render();
     };
@@ -751,13 +832,32 @@ document.addEventListener('submit', e => {
     }
     finish(newPass(), true); return;
   }
+  if (id === 'ga' || id === 'ka') {
+    e.preventDefault();
+    const f = FAMS.find(x => x.id === e.target.dataset.fid); if (!f) return;
+    if (id === 'ga') {
+      const n = $('#ga-n').value.trim();
+      if (!n || n.length > 80) { toast('Informe o nome completo da pessoa.'); return; }
+      if (!Array.isArray(f.guardians)) f.guardians = [];
+      f.guardians.push(n + ' (' + $('#ga-r').value + ')'); log(actor(), 'Incluiu ' + n + ' entre os autorizados da família ' + f.name + '.'); render(); toast('Pessoa autorizada incluída.'); return;
+    }
+    let n = $('#ka-n').value.trim(); const a = +$('#ka-a').value, o = $('#ka-o').value.trim().slice(0, 300);
+    if (!n || n.length > 80) { toast('Informe o nome da criança.'); return; }
+    if (!/\s/.test(n) && !f.visitor) n += ' ' + f.name;
+    KIDS.push({ id: 'kf' + uid8(), name: n, age: ageLabel(a), room: roomForAge(a), fam: f.id, note: o, obs: '', status: 'out', time: '', out: '', by: '', code: 'CAD-' + rnd4() });
+    log(actor(), 'Incluiu a criança ' + n + ' na família ' + f.name + '.'); render(); toast('Criança incluída.'); return;
+  }
   if (id === 'ne') {
     e.preventDefault();
-    const m = $('#ne-d').value.trim().match(/^(\d{1,2})\/(\d{1,2})$/), n = $('#ne-n').value.trim(), tm = $('#ne-t').value.trim();
-    if (!m || +m[2] < 1 || +m[2] > 12 || !n || !tm) { toast('Informe a data como dia/mês (ex.: 29/11), o título e o horário.'); return; }
-    EVENTS.push({ id: 'e' + uid8(), at: Date.now(), day: m[1].padStart(2, '0'), mon: MONTHS[+m[2] - 1], w: $('#ne-w').value, t: tm, n, note: $('#ne-o').value.trim() });
-    log(actor(), 'Evento criado: ' + n + ' em ' + m[1] + '/' + m[2] + '.');
-    state.eform = false; render(); toast('Evento publicado na agenda dos pais.');
+    const m = $('#ne-d').value.trim().match(/^(\d{1,2})\/(\d{1,2})$/), n = $('#ne-n').value.trim().slice(0, 80), tm = $('#ne-t').value.trim().slice(0, 12);
+    if (!m || !n || !tm) { toast('Informe a data como dia/mês (ex.: 29/11), o título e o horário.'); return; }
+    const dd = +m[1], mm = +m[2], t0 = startOfToday();
+    let d = new Date(t0.getFullYear(), mm - 1, dd);
+    if (d < t0) d = new Date(t0.getFullYear() + 1, mm - 1, dd);
+    if (mm < 1 || mm > 12 || d.getDate() !== dd || d.getMonth() !== mm - 1) { toast('Essa data não existe. Confira o dia e o mês.'); return; }
+    EVENTS.push({ id: 'e' + uid8(), at: Date.now(), ts: d.getTime(), day: String(dd).padStart(2, '0'), mon: MONTHS[mm - 1], w: WEEK[d.getDay()], t: tm, n, note: $('#ne-o').value.trim().slice(0, 200) });
+    log(actor(), 'Evento criado: ' + n + ' em ' + String(dd).padStart(2, '0') + '/' + String(mm).padStart(2, '0') + '.');
+    state.eform = false; render(); toast('Evento publicado na agenda dos pais.'); return;
   }
 });
 document.addEventListener('change', e => {
@@ -774,7 +874,10 @@ document.addEventListener('change', e => {
     const b = $('#doci');
     if (b) { b.disabled = !s.length; b.textContent = s.length ? 'Fazer check-in (' + s.length + ')' : 'Fazer check-in'; }
   }
-  if (ds.pref) state.prefs[ds.pref] = e.target.checked;
+  if (ds.pref) {
+    state.prefs[ds.pref] = e.target.checked;
+    if (cloudOn()) Cloud.savePrefs(state.prefs).then(r => toast(r.ok ? 'Preferência salva.' : r.err)); else toast('Preferência salva.');
+  }
   if (ds.cap) {
     const r = room(ds.cap), v = Math.max(1, Math.min(40, parseInt(e.target.value, 10) || r.cap));
     r.cap = v; log(actor(), 'Capacidade do ' + r.name + ' ajustada para ' + v + '.'); render(); toast('Capacidade atualizada.');

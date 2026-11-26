@@ -6,7 +6,7 @@
    pelas regras em firestore.rules, não por este arquivo. */
 (function () {
   const cfg = window.VERBO_FIREBASE || {};
-  const MODE = window.VERBO_APP || 'familia';
+  const MODE = (document.body && document.body.dataset.app) || 'familia';
   const C = window.Cloud = { enabled: !!(cfg.apiKey && cfg.projectId), ready: false, profile: null, anon: false, needsSetup: false, app: null };
   if (!C.enabled) return;
 
@@ -15,12 +15,26 @@
   const readyPromise = new Promise(r => { readyResolve = r; });
 
   const digits = s => String(s || '').replace(/\D/g, '');
-  const phoneEmail = (ph, v) => 'p' + digits(ph) + (v ? 'v' + v : '') + '@pais.verbo.app';
+  const normPhone = ph => { const d = digits(ph); return (d.length > 11 && d.startsWith('55')) ? d.slice(2) : d; };
+  const phoneEmail = (ph, v) => 'p' + normPhone(ph) + (v ? 'v' + v : '') + '@pais.verbo.app';
   const stable = o => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).sort().reduce((a, x) => { if (v[x] !== undefined) a[x] = v[x]; return a; }, {}) : v);
   const COLS = () => ({ rooms: ROOMS, tias: TIAS, families: FAMS, kids: KIDS, alerts: state.alerts, audit: state.audit, users: USERS, events: EVENTS });
   const STRIP = { users: ['pass', 'tokens'] };
   const ser = (col, o) => { const c = Object.assign({}, o); (STRIP[col] || []).forEach(k => delete c[k]); return c; };
   const appOf = role => role === 'pais' ? 'pais' : role === 'tia' ? 'tias' : 'gestao';
+  /* O que chega do servidor nunca é confiado: textos viram texto, listas viram listas e valores
+     fora do esperado são trocados por um padrão, para um registro malformado não quebrar as telas. */
+  const S = (v, n) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, n);
+  function clean(col, o) {
+    const txt = (keys, n) => keys.forEach(k => { if (k in o) o[k] = S(o[k], n); });
+    if (col === 'kids') { txt(['name', 'note', 'obs'], 300); txt(['age', 'room', 'fam', 'by', 'code', 'day'], 100); txt(['time', 'out'], 5); if ('status' in o && !['in', 'out', 'left'].includes(o.status)) o.status = 'out'; }
+    else if (col === 'families') { txt(['name', 'phone'], 100); o.guardians = Array.isArray(o.guardians) ? o.guardians.slice(0, 20).map(g => S(g, 100)) : []; }
+    else if (col === 'alerts') { txt(['text'], 500); txt(['time', 'kid', 'fam', 'by'], 100); if ('reply' in o) o.reply = o.reply === true; if ('seen' in o) o.seen = o.seen === true; if ('at' in o) o.at = +o.at || 0; }
+    else if (col === 'events') { txt(['day', 'mon', 'w', 't', 'n'], 80); txt(['note'], 300); if ('ts' in o) o.ts = +o.ts || 0; }
+    else if (col === 'tias') txt(['name', 'room'], 80);
+    else if (col === 'rooms') { txt(['name', 'ages'], 80); if ('cap' in o) o.cap = Math.max(0, Math.min(99, +o.cap || 0)); }
+    return o;
+  }
   const isText = el => !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
 
   function msg(e) {
@@ -55,7 +69,7 @@
   /* ---------- Firestore -> listas ---------- */
   function apply(col, docs) {
     const arr = COLS()[col], old = last[col] || {};
-    const items = docs.map(d => Object.assign({}, d.data(), { id: d.id }));
+    const items = docs.map(d => clean(col, Object.assign({}, d.data(), { id: d.id })));
     if (col === 'rooms' && !items.length) { loaded[col] = true; return; }
     if (['audit', 'alerts', 'events'].includes(col)) items.sort((a, b) => (a.at || 0) - (b.at || 0));
     // itens criados aqui e ainda não gravados continuam na lista
@@ -87,7 +101,7 @@
 
   function watchPublic() {
     unsubs.push(db.doc('config/main').onSnapshot(s => {
-      if (s.exists) { const d = s.data(); state.open = d.open !== false; state.counts = d.counts || {}; }
+      if (s.exists) { const d = s.data(); state.open = d.open !== false; state.counts = d.counts || {}; state.hist = Array.isArray(d.hist) ? d.hist.slice(-60) : []; }
       C.needsSetup = !s.exists; loaded.config = true; rerender();
     }, e => console.warn('config', e && e.code)));
   }
@@ -106,10 +120,10 @@
       sub('families', c('families').doc(p.fam)); sub('kids', c('kids').where('fam', '==', p.fam));
       sub('alerts', c('alerts').where('fam', '==', p.fam)); sub('tias', c('tias')); sub('users', c('users').doc(p.id));
     } else if (p.role === 'tia') {
-      sub('families', c('families')); sub('kids', c('kids')); sub('alerts', c('alerts')); sub('tias', c('tias')); sub('users', c('users').doc(p.id));
+      sub('families', c('families')); sub('kids', c('kids')); sub('alerts', c('alerts').orderBy('at', 'desc').limit(150)); sub('tias', c('tias')); sub('users', c('users').doc(p.id));
     } else {
-      sub('families', c('families')); sub('kids', c('kids')); sub('alerts', c('alerts')); sub('tias', c('tias')); sub('users', c('users'));
-      if (p.role === 'admin') sub('audit', c('audit'));
+      sub('families', c('families')); sub('kids', c('kids')); sub('alerts', c('alerts').orderBy('at', 'desc').limit(150)); sub('tias', c('tias')); sub('users', c('users'));
+      if (p.role === 'admin') sub('audit', c('audit').orderBy('at', 'desc').limit(300));
     }
   }
 
@@ -124,7 +138,7 @@
   /* ---------- listas -> Firestore ---------- */
   function writable() {
     const p = C.profile;
-    if (!p) return C.anon ? ['families', 'kids', 'audit'] : [];
+    if (!p) return C.anon ? ['families', 'kids'] : [];
     if (p.role === 'pais') return ['kids', 'alerts', 'audit'];
     if (p.role === 'tia') return ['kids', 'alerts', 'audit', 'config'];
     if (p.role === 'recepcao') return ['families', 'kids', 'alerts', 'audit', 'config'];
@@ -158,7 +172,7 @@
     if (!loaded.config || C.needsSetup) return;
     const counts = {};
     ROOMS.forEach(r => { counts[r.id] = KIDS.filter(k => k.room === r.id && k.status === 'in').length; });
-    const doc = { open: state.open, counts, bootstrapped: true }, s = stable(doc);
+    const doc = { open: state.open, counts, bootstrapped: true, hist: (state.hist || []).slice(-60) }, s = stable(doc);
     if (last.config === s) return;
     last.config = s;
     db.doc('config/main').set(doc).catch(e => fail('config', e));
@@ -169,11 +183,11 @@
     stop(); loaded = {}; last = {}; C.profile = null;
     [USERS, FAMS, KIDS, TIAS, EVENTS, state.alerts, state.audit].forEach(a => a.splice(0, a.length));
     state.sess = { pais: null, tias: null, gestao: null }; state.visit = null;
-    state.p = newP(); state.t = newT(); state.notice = null;
+    state.p = newP(); state.t = newT(); state.notice = null; state.hist = []; state.prefs = { fotos: false };
   }
 
   function adopt(p) {
-    C.profile = p; C.anon = false; C.app = appOf(p.role);
+    C.profile = p; C.anon = false; C.app = appOf(p.role); state.prefs = { fotos: !!(p.prefs && p.prefs.fotos) };
     USERS.splice(0, USERS.length, p);
     state.sess = { pais: null, tias: null, gestao: null }; state.sess[C.app] = p.id;
     if (C.app === 'pais') { state.fam = p.fam; state.p = newP(); }
@@ -237,7 +251,19 @@
     } finally { loggingIn = false; }
   };
 
-  C.logout = function () { return auth ? auth.signOut() : Promise.resolve(); };
+  // ao sair, este aparelho deixa de receber os avisos da família (outra pessoa pode entrar nele depois)
+  async function dropPushDoc() {
+    try {
+      if (!db || !C.profile || !C.profile.fam || !('serviceWorker' in navigator)) return;
+      const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription();
+      if (sub) await db.collection('pushsubs').doc(await sha(sub.endpoint)).delete();
+    } catch (e) { /* sem inscrição ou sem permissão */ }
+  }
+  C.logout = async function () { await dropPushDoc(); return auth ? auth.signOut() : undefined; };
+  C.savePrefs = async function (prefs) {
+    try { await db.collection('users').doc(C.profile.id).update({ prefs: { fotos: !!prefs.fotos } }); return { ok: true }; }
+    catch (e) { return { err: msg(e) }; }
+  };
   C.kick = function (text) { Object.keys(state.lerr).forEach(a => { state.lerr[a] = text; }); return C.logout(); };
 
   C.bootstrap = async function (name, email, pass) {
@@ -277,12 +303,19 @@
     } finally { sec.delete().catch(() => {}); }
   }
 
+  // se o perfil não for gravado, remove o login recém-criado para o cadastro poder ser refeito
+  async function authDelete(email, pass) {
+    const sec = firebase.initializeApp(cfg, 'secd' + Date.now());
+    try { const c = await sec.auth().signInWithEmailAndPassword(email, pass); await c.user.delete(); } catch (e) { /* nada a limpar */ }
+    finally { sec.delete().catch(() => {}); }
+  }
+
   async function createAccount(d) {
     const me = C.profile, role = d.role, name = String(d.name || '').trim().slice(0, 80);
     if (!me || (role === 'pais' ? !['recepcao', 'coord', 'admin'].includes(me.role) : me.role !== 'admin')) throw new Error('Você não tem permissão para criar este acesso.');
     if (!name) throw new Error('Informe o nome.');
     let email, ver = Number(d.ver) || 0;
-    if (role === 'pais') { if (digits(d.phone).length < 8) throw new Error('Informe um telefone válido, com DDD.'); email = phoneEmail(d.phone, ver); }
+    if (role === 'pais') { if (digits(d.phone).length < 8) throw new Error('Informe um telefone válido, com DDD.'); if (ver > 4) throw new Error('Este telefone já foi redefinido muitas vezes. Peça ao administrador para ajudar.'); email = phoneEmail(d.phone, ver); }
     else { email = String(d.login || '').trim().toLowerCase(); if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Informe um e-mail válido.'); }
     const pass = genPass();
     let uid;
@@ -291,7 +324,8 @@
     const profile = { id: uid, role, name, login: role === 'pais' ? '' : email, phone: role === 'pais' ? String(d.phone).slice(0, 30) : '', active: true };
     if (role === 'pais') { profile.fam = String(d.fam); if (ver) profile.ver = ver; }
     if (role === 'tia') { profile.tia = String(d.tia); profile.fam = d.fam ? String(d.fam) : ''; }
-    await db.collection('users').doc(uid).set(profile);
+    try { await db.collection('users').doc(uid).set(profile); }
+    catch (e) { await authDelete(email, pass); throw new Error(msg(e)); }
     return { uid, pass, profile };
   }
 
