@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https: wss:; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https: wss:; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'none'; form-action 'self'">
   <meta name="theme-color" content="#123b70">
   <meta name="robots" content="noindex">
   <title>Gestão | Verbo Crianças</title>
@@ -14,11 +14,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="gestao" data-app="gestao">
-  <div class="wrap">
-    <header class="gbar"><div id="logo-h"></div><span class="gtag">Gestão</span></header>
-    <main id="app" class="gmain"></main>
-    <p class="foot">Aprender. Adorar. Crescer com Jesus.</p>
-  </div>
+  <main id="app"></main>
   <div id="layer"></div>
   <div id="toast" class="toast" role="status" hidden></div>
   <script src="firebase-config.js"></script>

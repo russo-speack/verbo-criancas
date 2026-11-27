@@ -140,3 +140,11 @@ Como funciona: o aparelho dos pais se inscreve e guarda a inscrição no Firesto
 - **Fotos e vídeos**: o consentimento é salvo na conta do responsável e aparece na ficha da família.
 - Páginas com Content-Security-Policy (bloqueia scripts de fora) e todo texto vindo do servidor é escapado.
 - Limites que continuam: lotação das salas é conferida no aparelho (não no servidor); o visitante pode ser usado por qualquer pessoa com o QR, por natureza; push no iPhone exige instalar na tela inicial.
+
+## Novo visual (26/11/2026)
+
+- **Famílias**: boas-vindas, check-in em destaque, cartões dos filhos com foto (o responsável troca a foto em Detalhes; a imagem é reduzida e guardada no próprio cadastro, sem custo), próximo culto, avisos e histórico de participação.
+- **Tias**: sala em destaque com contagem, alerta vermelho de alergia, lista organizada, quem já saiu e com quem.
+- **Gestão**: barra lateral, indicadores, gráfico de frequência, tabelas com busca e filtros; funciona em computador e tablet.
+- **Visitante**: boas-vindas, campos grandes e "ingresso" com QR Code de retirada.
+- **Republique o `firestore.rules`** de novo: ele agora aceita foto do filho e o campo de quem retirou a criança.

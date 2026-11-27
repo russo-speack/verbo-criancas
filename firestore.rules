@@ -96,11 +96,14 @@ service cloud.firestore {
             && getAfter(/databases/$(db)/documents/families/$(request.resource.data.fam)).data.get('owner', '') == request.auth.uid);
       allow update: if isStaff()
         // a tia só mexe na presença (check-in e check-out)
-        || (isTia() && changed().hasOnly(['status', 'time', 'out', 'by', 'day']))
+        || (isTia() && changed().hasOnly(['status', 'time', 'out', 'by', 'day', 'pick']))
         // o responsável só faz o check-in dos próprios filhos, e só com o check-in aberto
         || (isPais() && resource.data.fam == myFam() && request.resource.data.fam == resource.data.fam
             && changed().hasOnly(['status', 'time', 'out', 'by', 'day'])
-            && resource.data.status == 'out' && request.resource.data.status == 'in' && openNow());
+            && resource.data.status == 'out' && request.resource.data.status == 'in' && openNow())
+        // o responsável troca a foto do próprio filho (imagem pequena)
+        || (isPais() && resource.data.fam == myFam() && request.resource.data.fam == resource.data.fam
+            && changed().hasOnly(['photo']) && str(request.resource.data.photo, 30000));
     }
 
     match /alerts/{id} {

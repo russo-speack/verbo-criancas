@@ -68,6 +68,8 @@ const EVENTS = [
   mkEv(nextDow(0, 1), '9h', 'Culto infantil', 'Se a criança tiver Bíblia, pode trazer.'),
   mkEv(nextDow(0, 2), '9h', 'Culto infantil', 'Dia de histórias em família.')
 ];
+const pastSun = n => { const d = nextDow(0, 0); d.setDate(d.getDate() - 7 * n); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
+KIDS.forEach(k => { if (k.id !== 'k6' && k.id !== 'k7') k.visits = [3, 2, 1].map(n => ({ d: pastSun(n), i: '09:0' + n, o: '10:' + (50 + n) })); });
 // data do evento: usa o carimbo gravado; eventos antigos sem carimbo são lidos pelo dia e mês
 const evTs = e => {
   if (e.ts) return e.ts;
@@ -94,7 +96,7 @@ const QUICK = [
 const newP = () => ({ tab: 'home', screen: null, sel: [], ckid: null, card: null, done: [] });
 const newT = () => ({ tab: 'sala', screen: null, room: null, kid: null });
 const state = {
-  mode: 'equipe', hist: [], fedit: null,
+  mode: 'equipe', hist: [], fedit: null, ff: 'todas', aq: '',
   fam: 'souza', sheet: null, visit: null, vn: 0, open: true, p: newP(), t: newT(), tia: 't2',
   g: 'painel', gq: '', gform: false, eform: false, alerts: [], audit: [],
   sess: { pais: null, tias: null, gestao: null }, lerr: { familia: null, gestao: null }, lval: { familia: '', gestao: '' },
@@ -119,6 +121,14 @@ const tia = () => TIAS.find(x => x.id === state.tia);
 const inRoom = id => (cloudOn() && Cloud.useCounts()) ? ((state.counts || {})[id] || 0) : KIDS.filter(k => k.room === id && k.status === 'in').length;
 const kidAlerts = id => liveAlerts().filter(a => a.kid === id);
 const first = s => String(s || '').split(' (')[0].split(' ')[0];
+const AVC = ['#123b70', '#1d78b8', '#7b3fb0', '#d63a4c', '#3f8a1f', '#b07a00'];
+const photoOk = p => typeof p === 'string' && p.length <= 30000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(p);
+const initials = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
+const avatar = (k, sz) => {
+  const h = Array.from(String(k.name || '')).reduce((a, c) => a + c.charCodeAt(0), 0);
+  return '<span class="av ' + (sz || '') + '" style="--c:' + AVC[h % AVC.length] + '">' + (photoOk(k.photo) ? '<img src="' + esc(k.photo) + '" alt="">' : esc(initials(k.name))) + '</span>';
+};
+const visitsOf = k => Array.isArray(k.visits) ? k.visits : [];
 const guards = f => Array.isArray(f.guardians) ? f.guardians : [];
 const roomForAge = a => a <= 2 ? 'bercario' : a <= 4 ? 'maternal' : a <= 7 ? 'juniores' : 'kids';
 const ageLabel = a => a < 1 ? 'menos de 1 ano' : a === 1 ? '1 ano' : a + ' anos';
@@ -199,11 +209,17 @@ const IC = {
   user: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
   check: '<svg viewBox="0 0 80 80" width="88" height="88" fill="none" aria-hidden="true"><circle cx="40" cy="40" r="34" stroke="#78c943" stroke-width="6"/><path d="M25 41l11 11 20-23" stroke="#78c943" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   qr: ico('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 19h2M14 20h1M20 14h1"/>'),
+  warn: ico('<path d="M12 3l10 17H2z"/><path d="M12 10v5M12 18v.5"/>'),
+  users: ico('<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/><path d="M16 5a3.5 3.5 0 010 7M18 14c2.4.6 4 2.4 4 5"/>'),
+  chart: ico('<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'),
+  key: ico('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>'),
+  list: ico('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'),
+  cam: ico('<path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13" r="4"/>'),
   clock: '<svg viewBox="0 0 80 80" width="88" height="88" fill="none" aria-hidden="true"><circle cx="40" cy="40" r="32" stroke="#ffc928" stroke-width="6"/><path d="M40 22v19l12 7" stroke="#ffc928" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 
 function doCheckIn(k, by) {
-  k.status = 'in'; k.time = now(); k.out = ''; k.by = by; k.day = todayKey();
+  k.status = 'in'; k.time = now(); k.out = ''; k.by = by; k.day = todayKey(); if (k.pick) k.pick = '';
 }
 
 function statusChip(k) {
@@ -248,38 +264,48 @@ function setupBox() {
 
 function appLogin(app) {
   const c = LOGIN_COPY[app];
-  if (app === 'gestao') return '<div class="loginbox"><div><h1>Entrar na Gestão</h1><p class="sub">' + c.sub + '</p></div>' + (cloudOn() && Cloud.needsSetup ? setupBox() : loginForm(app)) + demoCard(app) + '</div>';
+  if (app === 'gestao') return '<div class="loginbox"><div class="gl-logo">' + logoH() + '<p>Aprender. Adorar. Crescer com Jesus.</p></div><div><h1>Entrar na Gestão</h1><p class="sub">' + c.sub + '</p></div>' + (cloudOn() && Cloud.needsSetup ? setupBox() : loginForm(app)) + demoCard(app) + '</div>';
   return '<div class="app loginapp"><div class="hero">' + logoH() + '<p>Aprender. Adorar. Crescer com Jesus.</p></div>' +
     '<div class="scr"><div><h1>Entrar</h1><p class="sub">' + c.sub + '</p></div>' + loginForm(app) + demoCard(app) + '</div></div>';
 }
 
 /* ================= APP DOS PAIS ================= */
+const statusKid = k => k.status === 'in' ? '<span class="chip ok">Em sala desde ' + esc(k.time) + '</span>' : k.status === 'left' ? '<span class="chip left">Saiu às ' + esc(k.out) + '</span>' : '<span class="chip sun">Aguardando check-in</span>';
+const algBox = k => k.note ? '<div class="alg">' + IC.warn + '<span><b>Alergia ou cuidado:</b> ' + esc(k.note) + '</span></div>' : '';
+function kidCard(k) {
+  return '<article class="kc ' + esc(k.status) + '"><div class="kh">' + avatar(k, 'lg') + '<div class="kb"><strong>' + esc(k.name) + '</strong><span class="meta">' + esc(k.age) + ' · ' + esc(room(k.room).name) + '</span><span>' + statusKid(k) + '</span></div></div>' + algBox(k) +
+    '<button type="button" class="btn sm" data-detail="' + esc(k.id) + '">Detalhes e QR Code de retirada</button></article>';
+}
+function checkinCard(mine) {
+  const pend = mine.filter(k => k.status === 'out'), p = state.p;
+  if (!state.open) return '<section class="cico closed"><div class="hero wait" style="padding:0">' + IC.clock + '<h3>Check-in ainda fechado</h3><p>A equipe ainda não abriu o check-in. Volte em alguns minutinhos.</p></div></section>';
+  if (!pend.length) return '<section class="cico ok"><h3>Tudo certo por aqui!</h3><p class="meta">' + (mine.some(k => k.status === 'in') ? 'Seus filhos já estão na sala. Bom culto!' : 'Nenhum check-in pendente.') + '</p></section>';
+  return '<section class="cico"><div><h3>Check-in</h3><p class="meta">Marque quem vai para a sala.</p></div>' +
+    pend.map(k => '<label class="pick"><input type="checkbox" data-pick="' + esc(k.id) + '"' + (p.sel.includes(k.id) ? ' checked' : '') + '>' + avatar(k) + '<span><strong>' + esc(k.name) + '</strong><span class="meta">' + esc(room(k.room).name) + '</span></span></label>').join('') +
+    '<button type="button" class="btn primary wide" id="doci" data-docheckin' + (p.sel.length ? '' : ' disabled') + '>' + (p.sel.length ? 'Fazer check-in (' + p.sel.length + ')' : 'Fazer check-in') + '</button></section>';
+}
+function historyBlock(mine) {
+  return '<p class="sec">Histórico de participação</p>' + mine.map(k => {
+    const v = visitsOf(k).slice().reverse();
+    return '<article class="card"><div class="kh">' + avatar(k, 'sm') + '<div class="kb"><strong>' + esc(k.name) + '</strong><span class="meta">' + v.length + (v.length === 1 ? ' presença registrada' : ' presenças registradas') + '</span></div></div>' +
+      (v.length ? '<ul class="hist">' + v.slice(0, 6).map(x => '<li><b>' + esc(x.d) + '</b><span>' + esc(x.i) + ' às ' + esc(x.o) + '</span><span class="meta">' + (x.i && x.o ? dur(x.i, x.o) : '') + '</span></li>').join('') + '</ul>' : '<span class="hint">As presenças aparecem aqui depois de cada culto.</span>') + '</article>';
+  }).join('');
+}
+
 function tabHome(f, mine) {
-  const ids = mine.map(k => k.id), ev = upcoming()[0];
+  const ids = mine.map(k => k.id), ev = upcoming()[0], me = sessUser('pais') || sessUser('tias');
   const last = liveAlerts().filter(a => ids.includes(a.kid)).slice(-1)[0];
-  return '<div><h2>Olá! Que bom ter vocês aqui.</h2><p class="sub">Acompanhe a jornada da sua criança.</p></div>' +
-    '<div class="tiles"><button type="button" class="tile blue" data-tab="crianca"><strong>Minha criança</strong><span>Acessar</span></button>' +
-    '<button type="button" class="tile yel" data-tab="agenda"><strong>Agenda</strong><span>Acessar</span></button></div>' +
-    '<section class="card"><p class="sec">Próximo encontro</p>' + (ev ? '<strong>' + esc(ev.n) + '</strong><span class="meta">' + esc(ev.w) + ', ' + esc(ev.day) + '/' + (MONTHS.indexOf(ev.mon) + 1) + ' · ' + esc(ev.t) + '</span>' : '<strong>Em breve</strong><span class="meta">A coordenação ainda não publicou o próximo encontro.</span>') + '<span><span class="chip' + (state.open ? ' ok' : ' sun') + '">' + (state.open ? 'Check-in aberto' : 'Check-in ainda fechado') + '</span></span></section>' +
-    '<section class="card"><p class="sec">Aviso recente</p>' + (last ? '<span class="time">' + esc(last.time) + ' · ' + esc(kid(last.kid).name) + '</span><span>' + esc(last.text) + '</span><button type="button" class="btn" data-tab="avisos">Ver avisos</button>' : '<span class="hint">Ainda não há avisos para esta turma.</span>') + '</section>';
+  const total = mine.reduce((n, k) => n + visitsOf(k).length, 0);
+  return '<section class="hello"><small>' + esc(todayLong()) + '</small><h2>Olá, ' + esc(first(me ? me.name : f.name)) + '!</h2><p>Família ' + esc(f.name) + ' · que bom ter vocês aqui.</p></section>' +
+    checkinCard(mine) +
+    '<p class="sec">Seus filhos</p>' + mine.map(kidCard).join('') +
+    '<section class="card"><p class="sec">Próximo culto</p>' + (ev ? '<div class="ev"><div class="date"><b>' + esc(ev.day) + '</b><small>' + esc(ev.mon) + '</small></div><div><strong>' + esc(ev.n) + '</strong><span class="meta">' + esc(ev.w) + ' · ' + esc(ev.t) + '</span><span class="meta">' + esc(ev.note) + '</span></div></div>' : '<strong>Em breve</strong><span class="meta">A coordenação ainda não publicou o próximo encontro.</span>') + '</section>' +
+    '<section class="card"><p class="sec">Avisos e notificações</p>' + (last ? '<span class="time">' + esc(last.time) + ' · ' + esc(kid(last.kid).name) + '</span><span>' + esc(last.text) + '</span><button type="button" class="btn sm" data-tab="avisos">Ver avisos</button>' : '<span class="hint">Nenhum aviso por enquanto. Se a equipe precisar de você, chega aqui e no celular.</span>') + '</section>' +
+    '<section class="card"><p class="sec">Participação</p><strong>' + total + (total === 1 ? ' presença registrada' : ' presenças registradas') + '</strong><button type="button" class="btn sm" data-tab="crianca">Ver histórico</button></section>';
 }
 
 function tabCrianca(f, mine) {
-  const p = state.p;
-  const rows = mine.map(k => {
-    const can = state.open && k.status === 'out';
-    const info = '<span class="meta">' + esc(room(k.room).name) + ' · ' + (k.status === 'in' ? 'em sala desde ' + esc(k.time) : k.status === 'left' ? 'saiu às ' + esc(k.out) : 'aguardando check-in') + '</span>';
-    return '<div class="krow">' + (can
-      ? '<label><input type="checkbox" data-pick="' + esc(k.id) + '"' + (p.sel.includes(k.id) ? ' checked' : '') + '><span>' + esc(k.name) + '<br>' + info + '</span></label>'
-      : '<div><strong>' + esc(k.name) + '</strong><br>' + info + '</div>') +
-      '<button type="button" class="link" data-detail="' + esc(k.id) + '">Detalhes</button></div>';
-  }).join('');
-  const anyOut = mine.some(k => k.status === 'out');
-  const top = !state.open
-    ? '<div class="hero wait">' + IC.clock + '<h2>Ainda não abriu</h2><p>A equipe ainda não abriu o check-in. Volte em alguns minutinhos.</p></div>'
-    : '<p class="hint">' + (anyOut ? 'Marque quem vai para a sala e toque em Fazer check-in.' : 'Tudo certo por aqui. Bom culto!') + '</p>';
-  return '<h2>Minha criança</h2>' + top + '<div style="display:grid;gap:10px">' + rows + '</div>' +
-    (state.open && anyOut ? '<button type="button" class="btn primary wide" id="doci" data-docheckin' + (p.sel.length ? '' : ' disabled') + '>' + (p.sel.length ? 'Fazer check-in (' + p.sel.length + ')' : 'Fazer check-in') + '</button>' : '');
+  return '<h2>Minha criança</h2>' + checkinCard(mine) + mine.map(kidCard).join('') + historyBlock(mine);
 }
 
 function tabAgenda() {
@@ -307,7 +333,8 @@ function screenDone() {
 
 function screenDetail(k, staff) {
   const f = fam(k.fam), phone = f.phone || '';
-  return (k.by ? '<p class="sec">Responsável pelo check-in</p><div class="kv"><div class="full"><strong>' + esc(k.by) + '</strong><small>Telefone ' + esc(phone) + '</small></div></div>' : '<p class="hint">Ainda não houve check-in hoje.</p>') +
+  const head = '<div class="kh" style="justify-content:center;flex-direction:column;text-align:center">' + avatar(k, 'xl') + (!staff ? '<label class="btn sm photo">' + IC.cam + 'Trocar foto<input type="file" accept="image/*" data-photo="' + esc(k.id) + '" class="vh"></label>' : '') + '<span>' + statusKid(k) + '</span></div>' + algBox(k);
+  return head + (k.by ? '<p class="sec">Responsável pelo check-in</p><div class="kv"><div class="full"><strong>' + esc(k.by) + '</strong><small>Telefone ' + esc(phone) + '</small></div></div>' : '<p class="hint">Ainda não houve check-in hoje.</p>') +
     '<div class="care"><strong>Cuidados da criança</strong><span><b>Restrições alimentares:</b> ' + esc(k.note || 'Nenhuma informada') + '</span><span><b>Observações:</b> ' + esc(k.obs || 'Nenhuma') + '</span><span><b>Necessidades específicas:</b> Não informado</span></div>' +
     (k.status !== 'out' ? '<div class="kv"><div><small>Check-in</small><strong>' + esc(k.time) + '</strong></div><div><small>Check-out</small><strong>' + esc(k.out || 'Ainda na sala') + '</strong></div>' +
       '<div class="full"><small>Tempo de permanência</small><strong>' + dur(k.time, k.out || now()) + (k.out ? '' : ' até agora') + '</strong></div>' +
@@ -361,20 +388,20 @@ function renderParent(me) {
 
 /* ================= APP DAS TIAS ================= */
 function kidRow(k) {
-  return '<article class="trow"><div class="row"><div><button type="button" class="link name" data-tkid="' + esc(k.id) + '">' + esc(k.name) + '</button><div class="meta">' + esc(k.age) + ' · desde ' + esc(k.time) + '</div></div>' + statusChip(k) + '</div>' +
-    (k.note ? '<div class="note"><b>Atenção:</b> ' + esc(k.note) + '</div>' : '') +
+  return '<article class="kc in"><div class="kh">' + avatar(k, 'lg') + '<div class="kb"><button type="button" class="link name" data-tkid="' + esc(k.id) + '">' + esc(k.name) + '</button><span class="meta">' + esc(k.age) + ' · desde ' + esc(k.time) + '</span><span>' + statusChip(k) + '</span></div></div>' + algBox(k) +
     '<div class="actions"><button type="button" class="btn hl" data-alert="' + esc(k.id) + '">Avisar pais</button><button type="button" class="btn" data-out="' + esc(k.id) + '">Check-out</button></div></article>';
 }
 
 function roomView(rid) {
-  const r = room(rid), all = KIDS.filter(k => k.room === rid);
+  const r = room(rid), all = KIDS.filter(k => k.room === rid), t = tia(), mineRoom = !!t && t.room === rid;
   const inn = all.filter(k => k.status === 'in'), exp = all.filter(k => k.status === 'out'), lf = all.filter(k => k.status === 'left');
-  const c = inn.length;
-  return '<div><h2>' + esc(r.name) + '</h2><p class="sub">' + esc(r.ages) + '</p></div>' +
-    '<div class="pills2"><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + ' de ' + r.cap + ' vagas' + (c >= r.cap ? ' · lotada' : '') + '</span><span class="chip ' + (state.open ? 'ok' : 'sun') + '">' + (state.open ? 'Check-in aberto' : 'Check-in fechado') + '</span></div>' +
-    '<p class="sec">Em sala</p>' + (inn.length ? inn.map(k => kidRow(k)).join('') : '<p class="hint">Ainda não há crianças nesta sala.</p>') +
-    (exp.length ? '<p class="sec">Esperados</p>' + exp.map(k => '<article class="trow"><div class="row"><div><strong>' + esc(k.name) + '</strong><div class="meta">' + esc(k.age) + '</div></div><button type="button" class="btn primary" data-tin="' + esc(k.id) + '"' + (state.open && c < r.cap ? '' : ' disabled') + '>Check-in</button></div></article>').join('') : '') +
-    (lf.length ? '<p class="sec">Já saíram</p>' + lf.map(k => '<div class="krow"><div><strong>' + esc(k.name) + '</strong><br><span class="meta">saiu às ' + esc(k.out) + '</span></div></div>').join('') : '');
+  const c = inn.length, pct = r.cap ? Math.min(100, Math.round(c / r.cap * 100)) : 0, alg = inn.filter(k => k.note).length;
+  return '<section class="roomhead"><div><small>' + (mineRoom ? 'Minha sala' : 'Sala') + '</small><h2>' + esc(r.name) + '</h2><p>' + esc(r.ages) + (mineRoom ? ' · ' + esc(t.name) : '') + '</p></div>' +
+    '<div class="big"><b>' + c + '</b><span>de ' + r.cap + ' vagas' + (c >= r.cap ? ' · lotada' : '') + '</span></div><div class="occ" aria-hidden="true"><i class="' + (c >= r.cap ? 'full' : '') + '" style="width:' + pct + '%"></i></div>' +
+    '<div class="pills2"><span class="chip ' + (state.open ? 'ok' : 'sun') + '">' + (state.open ? 'Check-in aberto' : 'Check-in fechado') + '</span>' + (alg ? '<span class="chip hot">' + alg + ' com alergia</span>' : '') + (lf.length ? '<span class="chip left">' + lf.length + (lf.length > 1 ? ' já saíram' : ' já saiu') + '</span>' : '') + '</div></section>' +
+    '<p class="sec">Em sala (' + c + ')</p>' + (inn.length ? inn.map(k => kidRow(k)).join('') : '<p class="hint">Ainda não há crianças nesta sala.</p>') +
+    (exp.length ? '<p class="sec">Esperadas (' + exp.length + ')</p>' + exp.map(k => '<article class="kc out"><div class="kh">' + avatar(k) + '<div class="kb"><strong>' + esc(k.name) + '</strong><span class="meta">' + esc(k.age) + '</span></div><button type="button" class="btn primary sm" data-tin="' + esc(k.id) + '"' + (state.open && c < r.cap ? '' : ' disabled') + '>Check-in</button></div>' + algBox(k) + '</article>').join('') : '') +
+    (lf.length ? '<p class="sec">Já saíram (' + lf.length + ')</p>' + lf.map(k => '<article class="kc left"><div class="kh">' + avatar(k, 'sm') + '<div class="kb"><strong>' + esc(k.name) + '</strong><span class="meta">✓ Saiu às ' + esc(k.out) + (k.pick ? ' com ' + esc(k.pick) : '') + '</span></div><span class="chip left">Saiu</span></div></article>').join('') : '');
 }
 
 function renderTia(me) {
@@ -436,53 +463,84 @@ function endService() {
   const row = { d: label, c: act.length, v: act.filter(k => k.visitor).length, avg: ds.length ? hm(Math.round(ds.reduce((x, y) => x + y, 0) / ds.length)) : '—', ts: Date.now() };
   const prev = state.hist.find(h => h.d === label);
   if (prev) { prev.c += row.c; prev.v += row.v; prev.avg = row.avg; prev.ts = row.ts; } else state.hist.push(row);
-  act.forEach(k => { k.status = 'out'; k.time = ''; k.out = ''; k.by = ''; k.day = ''; });
+  act.forEach(k => {
+    if (k.time && !visitsOf(k).some(v => v.d === label)) k.visits = visitsOf(k).concat({ d: label, i: k.time, o: k.out || now() }).slice(-60);
+    k.status = 'out'; k.time = ''; k.out = ''; k.by = ''; k.day = ''; if (k.pick) k.pick = '';
+  });
   state.open = false;
   log(actor(), 'Culto encerrado: ' + row.c + ' crianças, ' + row.v + ' visitantes.');
   return true;
 }
+function freqRows() {
+  const entered = KIDS.filter(k => k.status !== 'out').length, vis = KIDS.filter(k => k.visitor && k.status !== 'out').length;
+  const past = (cloudOn() ? [] : PAST.slice().reverse()).concat(state.hist.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0)));
+  return past.slice(-7).concat([{ d: 'Hoje', c: entered, v: vis, today: true }]);
+}
+function freqChart() {
+  const rows = freqRows(), max = Math.max(10, ...rows.map(r => +r.c || 0));
+  return '<div class="chart" role="img" aria-label="Crianças presentes nos últimos cultos">' + rows.map(r => {
+    const c = +r.c || 0, v = +r.v || 0;
+    return '<div class="col' + (r.today ? ' today' : '') + '"><span class="val">' + c + '</span><div class="bars"><i class="b" style="height:' + Math.max(c ? 4 : 1, Math.round(c / max * 100)) + '%">' + (c && v ? '<u style="height:' + Math.round(Math.min(1, v / c) * 100) + '%"></u>' : '') + '</i></div><small>' + esc(r.d) + '</small></div>';
+  }).join('') + '</div><div class="legend"><span><i style="background:var(--navy)"></i>Crianças</span><span><i style="background:var(--yellow)"></i>Visitantes</span><span><i style="background:var(--sky)"></i>Culto de hoje</span></div>';
+}
+
 function gPainel() {
   const inside = KIDS.filter(k => k.status === 'in').length, entered = KIDS.filter(k => k.status !== 'out').length;
   const left = KIDS.filter(k => k.status === 'left').length, vis = KIDS.filter(k => k.visitor && k.status !== 'out').length;
+  const alg = KIDS.filter(k => k.status === 'in' && k.note).length;
   const rooms = ROOMS.map(r => {
-    const c = inRoom(r.id), tt = TIAS.find(x => x.room === r.id), pct = Math.min(100, Math.round(c / r.cap * 100));
+    const c = inRoom(r.id), tt = TIAS.find(x => x.room === r.id), pct = r.cap ? Math.min(100, Math.round(c / r.cap * 100)) : 0;
     return '<article class="rc"><div class="row2"><h3>' + esc(r.name) + '</h3><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + '/' + r.cap + (c >= r.cap ? ' · lotada' : '') + '</span></div>' +
       '<span class="meta">' + esc(r.ages) + ' · ' + (tt ? esc(tt.name) : 'Sem tia definida') + '</span><div class="occ" aria-hidden="true"><i class="' + (c >= r.cap ? 'full' : '') + '" style="width:' + pct + '%"></i></div>' +
       (canManage() ? '<label>Capacidade da sala<input type="number" min="1" max="40" value="' + r.cap + '" data-cap="' + esc(r.id) + '"></label>' : '<span class="meta">Capacidade: ' + r.cap + ' crianças</span>') + '</article>';
   }).join('');
-  return '<section class="stats" aria-label="Contagem"><div class="stat main"><b>' + inside + '</b><span>em sala agora</span></div><div class="stat"><b>' + entered + '</b><span>entraram</span></div><div class="stat"><b>' + left + '</b><span>já saíram</span></div><div class="stat"><b>' + vis + '</b><span>visitantes</span></div></section>' +
-    '<section class="panel"><div class="vqrow"><div><h2>Check-in do culto</h2><p class="meta">Culto infantil · ' + esc(todayLong()) + '. ' + (state.open ? 'As famílias já podem fazer check-in.' : 'As famílias ainda não conseguem entrar.') + '</p><div class="actions"><button type="button" class="btn ' + (state.open ? '' : 'hl') + '" data-toggle>' + (state.open ? 'Check-in aberto · fechar' : 'Check-in fechado · abrir') + '</button><button type="button" class="btn" data-endservice>Encerrar culto</button></div><p class="meta">Ao encerrar, as salas zeram, o check-in fecha e o total do dia vai para os relatórios.</p></div></div></section>' + staleHtml() +
+  return '<div><h1>Painel</h1><p class="sub">Culto infantil · ' + esc(todayLong()) + '</p></div>' + staleHtml() +
+    '<section class="stats" aria-label="Indicadores"><div class="stat main"><b>' + inside + '</b><span>em sala agora</span></div><div class="stat"><b>' + entered + '</b><span>entraram hoje</span></div><div class="stat"><b>' + left + '</b><span>já saíram</span></div><div class="stat"><b>' + vis + '</b><span>visitantes</span></div><div class="stat' + (alg ? ' warn' : '') + '"><b>' + alg + '</b><span>com alergia em sala</span></div></section>' +
+    '<div class="two"><section class="panel"><h2>Check-in do culto</h2><p class="meta">' + (state.open ? 'Aberto: as famílias já podem fazer check-in.' : 'Fechado: as famílias ainda não conseguem entrar.') + '</p><div class="actions"><button type="button" class="btn ' + (state.open ? '' : 'hl') + '" data-toggle>' + (state.open ? 'Check-in aberto · fechar' : 'Check-in fechado · abrir') + '</button><button type="button" class="btn" data-endservice>Encerrar culto</button></div><p class="meta">Ao encerrar, as salas zeram, o check-in fecha e o total do dia vai para os relatórios.</p></section>' +
+    '<section class="panel"><div class="vqrow">' + qr(visitorUrl()) + '<div><h2>QR Code para visitantes</h2><p class="meta">Imprima e fixe na entrada. A equipe também tem este QR Code no app, na aba Visitantes.</p><a class="btn sm" href="' + esc(visitorUrl()) + '" target="_blank" rel="noopener">Abrir página do visitante</a></div></div></section></div>' +
     '<h2>Salas</h2><div class="rcards rooms">' + rooms + '</div>' +
-    '<section class="panel"><div class="vqrow">' + qr(visitorUrl()) + '<div><h2>QR Code para visitantes</h2><p class="meta">Imprima e fixe na entrada. O visitante aponta a câmera do celular e faz o check-in sozinho, sem baixar nada. A equipe também tem este QR Code no app, na aba Visitantes.</p><a class="btn" href="' + esc(visitorUrl()) + '" target="_blank" rel="noopener">Abrir página do visitante</a></div></div></section>';
+    '<section class="panel"><h2>Frequência dos últimos cultos</h2>' + freqChart() + '</section>';
 }
 
 const RELS = ['mãe', 'pai', 'avó', 'avô', 'tio', 'tia', 'madrinha', 'padrinho', 'outro responsável'];
-function famCards() {
-  const q = state.gq.trim().toLowerCase();
-  const list = FAMS.filter(f => !q || (f.name + ' ' + guards(f).join(' ') + ' ' + KIDS.filter(k => k.fam === f.id).map(k => k.name).join(' ')).toLowerCase().includes(q));
-  return list.length ? list.map(f => {
+function famTable() {
+  const q = state.gq.trim().toLowerCase(), ff = state.ff;
+  const list = FAMS.filter(f => {
+    const ks = KIDS.filter(k => k.fam === f.id);
+    if (ff === 'visitantes' && !f.visitor) return false;
+    if (ff === 'cadastradas' && f.visitor) return false;
+    if (ff === 'alergia' && !ks.some(k => k.note)) return false;
+    return !q || (f.name + ' ' + guards(f).join(' ') + ' ' + (f.phone || '') + ' ' + ks.map(k => k.name).join(' ')).toLowerCase().includes(q);
+  });
+  if (!list.length) return '<div class="empty">Nenhuma família encontrada.</div>';
+  const rows = list.map(f => {
     const ks = KIDS.filter(k => k.fam === f.id), ed = state.fedit === f.id, gl = guards(f), fid = esc(f.id);
-    const acc = USERS.find(u => u.fam === f.id && u.role === 'pais'), ph = acc && acc.prefs ? (acc.prefs.fotos ? '<span class="chip ok">Fotos autorizadas</span>' : '<span class="chip left">Fotos não autorizadas</span>') : '';
-    const form = ed ? '<form class="form inline" id="ga" data-fid="' + fid + '" autocomplete="off"><p class="sec">Incluir pessoa autorizada</p><label>Nome completo<input type="text" id="ga-n" maxlength="80"></label><label>Quem é<select id="ga-r">' + RELS.map(r => '<option>' + r + '</option>').join('') + '</select></label><button type="submit" class="btn primary">Incluir</button></form>' +
-      '<form class="form inline" id="ka" data-fid="' + fid + '" autocomplete="off"><p class="sec">Incluir criança</p><label>Nome<input type="text" id="ka-n" maxlength="80"></label><label>Idade<select id="ka-a">' + ageOpts(3) + '</select></label><label>Alergias ou cuidados<input type="text" id="ka-o" maxlength="300" placeholder="Opcional"></label><button type="submit" class="btn primary">Incluir</button></form>' : '';
-    return '<article class="rc"><div class="row2"><h3>Família ' + esc(f.name) + '</h3>' + (f.visitor ? '<span class="chip sun">Visitante</span>' : '') + '</div><span class="meta">Telefone ' + esc(f.phone) + '</span>' + (ph ? '<span>' + ph + '</span>' : '') +
-      '<div><p class="sec">Autorizados a retirar</p>' + gl.map((g, i) => '<div>' + esc(g) + (ed && gl.length > 1 ? ' <button type="button" class="link" data-grm="' + fid + ':' + i + '">Remover</button>' : '') + '</div>').join('') + '</div>' +
-      '<div><p class="sec">Crianças</p>' + ks.map(k => '<div>' + esc(k.name) + ' <span class="meta">· ' + esc(k.age) + ' · ' + esc(room(k.room).name) + '</span>' + (k.note ? '<div class="meta">Atenção: ' + esc(k.note) + '</div>' : '') + '</div>').join('') + '</div>' +
-      '<button type="button" class="btn sm" data-fedit="' + fid + '">' + (ed ? 'Fechar edição' : 'Editar cadastro') + '</button>' + form + '</article>';
-  }).join('') : '<div class="empty">Nenhuma família encontrada.</div>';
+    const acc = USERS.find(u => u.fam === f.id && u.role === 'pais');
+    const ph = acc && acc.prefs ? (acc.prefs.fotos ? '<span class="chip ok">Autorizadas</span>' : '<span class="chip left">Não autorizadas</span>') : '<span class="meta">Sem resposta</span>';
+    const edit = ed ? '<tr class="edr"><td colspan="5"><div class="edgrid"><div><p class="sec">Autorizados a retirar</p>' + gl.map((g, i) => '<div class="grow">' + esc(g) + (gl.length > 1 ? ' <button type="button" class="link" data-grm="' + fid + ':' + i + '">Remover</button>' : '') + '</div>').join('') +
+      '<form class="form inline" id="ga" data-fid="' + fid + '" autocomplete="off"><label>Nome completo<input type="text" id="ga-n" maxlength="80"></label><label>Quem é<select id="ga-r">' + RELS.map(r => '<option>' + r + '</option>').join('') + '</select></label><button type="submit" class="btn primary">Incluir pessoa</button></form></div>' +
+      '<div><p class="sec">Incluir criança</p><form class="form inline" id="ka" data-fid="' + fid + '" autocomplete="off"><label>Nome<input type="text" id="ka-n" maxlength="80"></label><label>Idade<select id="ka-a">' + ageOpts(3) + '</select></label><label>Alergias ou cuidados<input type="text" id="ka-o" maxlength="300" placeholder="Opcional"></label><button type="submit" class="btn primary">Incluir criança</button></form></div></div></td></tr>' : '';
+    return '<tr><td><strong>Família ' + esc(f.name) + '</strong>' + (f.visitor ? ' <span class="chip sun">Visitante</span>' : '') + '<div class="meta">' + esc(f.phone) + '</div></td>' +
+      '<td>' + (ks.map(k => '<div class="kmini">' + avatar(k, 'sm') + '<span>' + esc(k.name) + ' <span class="meta">· ' + esc(k.age) + ' · ' + esc(room(k.room).name) + '</span>' + (k.note ? '<span class="chip hot">' + esc(k.note) + '</span>' : '') + '</span></div>').join('') || '<span class="meta">Nenhuma</span>') + '</td>' +
+      '<td>' + gl.length + '</td><td>' + ph + '</td><td><button type="button" class="btn sm" data-fedit="' + fid + '">' + (ed ? 'Fechar' : 'Editar') + '</button></td></tr>' + edit;
+  }).join('');
+  return '<div class="tbl"><table><thead><tr><th>Família</th><th>Crianças</th><th>Autorizados</th><th>Fotos</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
 function gFamilias() {
   const form = state.gform ? '<form class="form inline" id="nf" autocomplete="off"><label>Sobrenome da família<input type="text" id="nf-s"></label><label>Responsável<input type="text" id="nf-g" placeholder="Nome completo"></label><label>Telefone<input type="tel" id="nf-p" placeholder="(00) 90000-0000"></label><label>Nome da criança<input type="text" id="nf-n"></label><label>Idade<select id="nf-a">' + ageOpts(3) + '</select></label><label>Alergias ou cuidados<input type="text" id="nf-o" placeholder="Opcional"></label><button type="submit" class="btn primary">Salvar cadastro</button></form>' : '';
-  return noticeHtml() + '<div class="head" style="margin:0"><div><h2>Famílias</h2><p class="sub">' + FAMS.length + ' famílias cadastradas</p></div><button type="button" class="btn primary" data-gform>' + (state.gform ? 'Fechar formulário' : 'Nova família') + '</button></div>' + form +
-    '<label class="form" style="padding:12px"><span style="font-size:14px;font-weight:600;color:var(--muted)">Buscar por família, responsável ou criança</span><input type="text" id="g-q" value="' + esc(state.gq) + '" placeholder="Digite um nome"></label>' +
-    '<div class="rcards" id="flist">' + famCards() + '</div>';
+  const pills = [['todas', 'Todas'], ['cadastradas', 'Cadastradas'], ['visitantes', 'Visitantes'], ['alergia', 'Com alergia']].map(x => '<button type="button" data-ff="' + x[0] + '" aria-pressed="' + (state.ff === x[0]) + '">' + x[1] + '</button>').join('');
+  return noticeHtml() + '<div class="head"><div><h1>Famílias</h1><p class="sub">' + FAMS.length + ' famílias cadastradas</p></div><button type="button" class="btn primary" data-gform>' + (state.gform ? 'Fechar formulário' : 'Nova família') + '</button></div>' + form +
+    '<div class="tools"><input type="text" id="g-q" value="' + esc(state.gq) + '" placeholder="Buscar por família, responsável, telefone ou criança" aria-label="Buscar famílias"><div class="pills" role="group" aria-label="Filtrar famílias">' + pills + '</div></div>' +
+    '<div id="flist">' + famTable() + '</div>';
 }
 
 function gEquipe() {
-  const rows = TIAS.map(x => { const acc = USERS.find(u => u.tia === x.id), on = !acc || acc.active; return '<article class="rc"><div class="row2"><h3>' + esc(x.name) + '</h3><span class="chip ' + (on ? 'ok' : 'left') + '">' + (on ? 'Ativa hoje' : 'Acesso desativado') + '</span></div><label>Sala de hoje<select data-tiaroom="' + esc(x.id) + '">' + ROOMS.map(r => '<option value="' + esc(r.id) + '"' + (r.id === x.room ? ' selected' : '') + '>' + esc(r.name) + '</option>').join('') + '</select></label></article>'; }).join('');
+  const rows = TIAS.map(x => { const acc = USERS.find(u => u.tia === x.id), on = !acc || acc.active, n = KIDS.filter(k => k.room === x.room && k.status === 'in').length;
+    return '<tr><td><strong>' + esc(x.name) + '</strong></td><td><select data-tiaroom="' + esc(x.id) + '" aria-label="Sala de ' + esc(x.name) + '">' + ROOMS.map(r => '<option value="' + esc(r.id) + '"' + (r.id === x.room ? ' selected' : '') + '>' + esc(r.name) + '</option>').join('') + '</select></td><td>' + n + ' em sala</td><td><span class="chip ' + (on ? 'ok' : 'left') + '">' + (on ? 'Ativa hoje' : 'Acesso desativado') + '</span></td></tr>'; }).join('');
   const roles = [['App dos pais', 'Responsável', 'Ver os próprios filhos, fazer check-in, receber avisos, responder “estou indo” e ver a agenda.'], ['App das tias', 'Equipe de sala', 'Ver as salas, fazer check-in e check-out, ler cuidados da criança e enviar avisos aos pais.'], ['Gestão · Recepção', 'Recepção', 'Ver o painel, cadastrar famílias e abrir o check-in.'], ['Gestão · Coordenação', 'Coordenação', 'Tudo da recepção, mais equipe, capacidade das salas, agenda e relatórios.'], ['Gestão · Administrador', 'Administrador', 'Tudo da coordenação, mais acessos e registro de ações.']];
-  return '<div><h2>Equipe</h2><p class="sub">Defina em que sala cada tia está hoje. O app dela já abre na sala certa.</p></div><div class="rcards">' + rows + '</div>' +
+  return '<div><h1>Equipe</h1><p class="sub">Defina em que sala cada tia está hoje. O app dela já abre na sala certa.</p></div>' +
+    '<div class="tbl"><table><thead><tr><th>Nome</th><th>Sala de hoje</th><th>Crianças</th><th>Estado</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<h2>Funções e acessos</h2><div class="rcards">' + roles.map(r => '<article class="rc"><h3>' + r[0] + '</h3><span class="chip" style="justify-self:start">' + r[1] + '</span><span>' + r[2] + '</span></article>').join('') + '</div>';
 }
 
@@ -490,7 +548,7 @@ function gAgenda() {
   const form = state.eform ? '<form class="form inline" id="ne" autocomplete="off"><label>Data (dia/mês)<input type="text" id="ne-d" placeholder="29/11" inputmode="numeric" maxlength="5"></label><label>Horário<input type="text" id="ne-t" placeholder="9h" maxlength="12"></label><label>Título<input type="text" id="ne-n" placeholder="Culto infantil" maxlength="80"></label><label>Observação<input type="text" id="ne-o" placeholder="Opcional" maxlength="200"></label><button type="submit" class="btn primary">Salvar evento</button></form>' : '';
   const t0 = startOfToday().getTime(), all = EVENTS.slice().sort((a, b) => evTs(a) - evTs(b));
   const list = all.filter(e => evTs(e) >= t0).concat(all.filter(e => evTs(e) < t0).slice(-5).reverse());
-  return '<div class="head" style="margin:0"><div><h2>Agenda</h2><p class="sub">O que você publicar aparece no app dos pais. Eventos que já passaram saem da agenda deles.</p></div><button type="button" class="btn primary" data-eform>' + (state.eform ? 'Fechar formulário' : 'Novo evento') + '</button></div>' + form +
+  return '<div class="head"><div><h1>Agenda</h1><p class="sub">O que você publicar aparece no app dos pais. Eventos que já passaram saem da agenda deles.</p></div><button type="button" class="btn primary" data-eform>' + (state.eform ? 'Fechar formulário' : 'Novo evento') + '</button></div>' + form +
     (list.length ? '' : '<p class="hint">Nenhum evento cadastrado ainda.</p>') +
     '<div class="rcards">' + list.map(e => '<article class="rc ev" style="grid-template-columns:auto 1fr;display:grid;align-items:center;gap:14px"><div class="date"><b>' + esc(e.day) + '</b><small>' + esc(e.mon) + '</small></div><div><strong>' + esc(e.n) + '</strong>' + (evTs(e) < t0 ? ' <span class="chip left">Já passou</span>' : '') + '<span class="meta">' + esc(e.w) + ' · ' + esc(e.t) + '</span><span class="meta">' + esc(e.note) + '</span></div></article>').join('') + '</div>';
 }
@@ -499,14 +557,15 @@ function gRelatorios() {
   const entered = KIDS.filter(k => k.status !== 'out').length, vis = KIDS.filter(k => k.visitor && k.status !== 'out').length;
   const rows = [{ d: todayShort() + ' (hoje)', c: entered, v: vis, avg: 'em andamento' }].concat(state.hist.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 12), cloudOn() ? [] : PAST);
   const max = Math.max(50, ...rows.map(r => r.c));
-  return '<div><h2>Relatórios</h2><p class="sub">Presença por culto. ' + (cloudOn() ? 'O total de cada culto é guardado quando você usa Encerrar culto, no painel.' : 'Os cultos anteriores são dados de exemplo.') + '</p></div>' +
+  return '<div><h1>Relatórios</h1><p class="sub">Presença por culto. ' + (cloudOn() ? 'O total de cada culto é guardado quando você usa Encerrar culto, no painel.' : 'Os cultos anteriores são dados de exemplo.') + '</p></div>' +
+    '<section class="panel"><h2>Frequência</h2>' + freqChart() + '</section>' +
     '<div class="tbl"><table><thead><tr><th>Culto</th><th>Check-ins</th><th></th><th>Visitantes</th><th>Permanência média</th></tr></thead><tbody>' +
     rows.map(r => '<tr><td>' + esc(r.d) + '</td><td>' + (+r.c || 0) + '</td><td><div class="bar2" aria-hidden="true"><i style="width:' + Math.round(r.c / max * 100) + '%"></i></div></td><td>' + (+r.v || 0) + '</td><td>' + esc(r.avg) + '</td></tr>').join('') + '</tbody></table></div>';
 }
 
 function gRegistro() {
   const rows = state.audit.slice().reverse();
-  return '<div><h2>Registro de ações</h2><p class="sub">Quem fez o quê, para dar transparência e segurança ao cuidado das crianças.</p></div>' +
+  return '<div><h1>Registro de ações</h1><p class="sub">Quem fez o quê, para dar transparência e segurança ao cuidado das crianças.</p></div>' +
     '<section class="panel">' + (rows.length ? '<ul class="log">' + rows.map(a => '<li><span class="time">' + esc(a.t) + '</span><b>' + esc(a.who) + '</b><span>' + esc(a.text) + '</span></li>').join('') + '</ul>' : '<p class="hint">Ainda não há ações registradas.</p>') + '</section>';
 }
 
@@ -517,17 +576,23 @@ function noticeHtml() {
 
 const famOpts = sel => FAMS.filter(f => !f.visitor).map(f => '<option value="' + esc(f.id) + '"' + (f.id === sel ? ' selected' : '') + '>Família ' + esc(f.name) + '</option>').join('');
 
-function gAcessos() {
-  const me = sessUser('gestao'), f = state.af;
-  const list = USERS.filter(u => !u.replaced).filter(u => f === 'todos' || (f === 'pais' && u.role === 'pais') || (f === 'tias' && u.role === 'tia') || (f === 'gestao' && STAFF_ROLES.includes(u.role)));
-  const pills = [['todos', 'Todos'], ['pais', 'Pais'], ['tias', 'Tias'], ['gestao', 'Gestão']].map(x => '<button type="button" data-af="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>').join('');
-  const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>').join('') + '</select></label><label>Também é responsável por uma família (só para tias)<select id="na-f"><option value="">Nenhuma</option>' + famOpts('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
-  const rows = list.map(u => '<tr><td>' + esc(u.name) + '</td><td>' + ROLES[u.role] + (u.role === 'tia' ? '<select class="mini" data-ulink="' + esc(u.id) + '" aria-label="Família de ' + esc(u.name) + '"><option value="">Sem família</option>' + famOpts(u.fam) + '</select>' : '') + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
+function acessosTable() {
+  const me = sessUser('gestao'), f = state.af, q = state.aq.trim().toLowerCase();
+  const list = USERS.filter(u => !u.replaced).filter(u => f === 'todos' || (f === 'pais' && u.role === 'pais') || (f === 'tias' && u.role === 'tia') || (f === 'gestao' && STAFF_ROLES.includes(u.role))).filter(u => !q || (u.name + ' ' + (u.login || '') + ' ' + (u.phone || '')).toLowerCase().includes(q));
+  if (!list.length) return '<div class="empty">Nenhum acesso encontrado.</div>';
+  const rows = list.map(u => '<tr><td><strong>' + esc(u.name) + '</strong></td><td>' + ROLES[u.role] + (u.role === 'tia' ? '<select class="mini" data-ulink="' + esc(u.id) + '" aria-label="Família de ' + esc(u.name) + '"><option value="">Sem família</option>' + famOpts(u.fam) + '</select>' : '') + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
     (u.id === me.id ? '<span class="meta">Você</span>' : '<button type="button" class="btn sm" data-utoggle="' + esc(u.id) + '">' + (u.active ? 'Desativar' : 'Reativar') + '</button>') +
     '<button type="button" class="btn sm" data-ureset="' + esc(u.id) + '">Redefinir senha</button></div></td></tr>').join('');
-  return noticeHtml() + '<div class="head" style="margin:0"><div><h2>Acessos</h2><p class="sub">Quem pode entrar em cada app. Desativar uma conta tira a pessoa do app na hora.</p></div><button type="button" class="btn primary" data-aform>' + (state.aform ? 'Fechar formulário' : 'Novo acesso') + '</button></div>' + form +
-    '<div class="pills" role="group" aria-label="Filtrar acessos">' + pills + '</div>' +
-    '<div class="tbl"><table><thead><tr><th>Nome</th><th>Perfil</th><th>Login</th><th>Estado</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  return '<div class="tbl"><table><thead><tr><th>Nome</th><th>Perfil</th><th>Login</th><th>Estado</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+function gAcessos() {
+  const f = state.af;
+  const pills = [['todos', 'Todos'], ['pais', 'Pais'], ['tias', 'Tias'], ['gestao', 'Gestão']].map(x => '<button type="button" data-af="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>').join('');
+  const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>').join('') + '</select></label><label>Também é responsável por uma família (só para tias)<select id="na-f"><option value="">Nenhuma</option>' + famOpts('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
+  return noticeHtml() + '<div class="head"><div><h1>Acessos</h1><p class="sub">Quem pode entrar em cada app. Desativar uma conta tira a pessoa do app na hora.</p></div><button type="button" class="btn primary" data-aform>' + (state.aform ? 'Fechar formulário' : 'Novo acesso') + '</button></div>' + form +
+    '<div class="tools"><input type="text" id="a-q" value="' + esc(state.aq) + '" placeholder="Buscar por nome, e-mail ou telefone" aria-label="Buscar acessos"><div class="pills" role="group" aria-label="Filtrar acessos">' + pills + '</div></div>' +
+    '<div id="alist">' + acessosTable() + '</div>';
 }
 
 function renderGestao() {
@@ -535,9 +600,10 @@ function renderGestao() {
   if (!u) return appLogin('gestao');
   const allowed = PERMS[u.role];
   if (!allowed.includes(state.g)) state.g = 'painel';
-  const nav = '<nav class="anav" aria-label="Seções da gestão">' + SECTIONS.filter(s => allowed.includes(s[0])).map(s => '<button type="button" data-gs="' + s[0] + '"' + (state.g === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') + '</nav>';
+  const ICS = { painel: IC.grid, familias: IC.users, equipe: IC.kid, agenda: IC.cal, relatorios: IC.chart, acessos: IC.key, registro: IC.list };
+  const nav = '<nav aria-label="Seções da gestão">' + SECTIONS.filter(x => allowed.includes(x[0])).map(x => '<button type="button" data-gs="' + x[0] + '"' + (state.g === x[0] ? ' aria-current="page"' : '') + '>' + ICS[x[0]] + '<span>' + x[1] + '</span></button>').join('') + '</nav>';
   const body = ({ painel: gPainel, familias: gFamilias, equipe: gEquipe, agenda: gAgenda, relatorios: gRelatorios, acessos: gAcessos, registro: gRegistro })[state.g]();
-  return '<div class="head"><div><h1>Gestão</h1><p class="sub">Cadastros, salas, equipe, agenda e relatórios do Verbo Crianças.</p></div><div class="who"><span class="chip">' + esc(u.name) + ' · ' + ROLES[u.role] + '</span><button type="button" class="btn" data-logout>Sair</button></div></div><div class="adm">' + nav + '<div class="acontent">' + body + '</div></div>';
+  return '<div class="shell"><aside class="side"><div class="sbrand">' + logoS() + '<small>Gestão</small></div>' + nav + '<div class="suser"><div><strong>' + esc(u.name) + '</strong><small>' + ROLES[u.role] + '</small></div><button type="button" class="btn sm" data-logout>Sair</button></div></aside><main class="smain">' + body + '</main></div>';
 }
 
 /* ================= VISITANTE ================= */
@@ -545,21 +611,24 @@ function renderVisitor() {
   if (state.visit) {
     const k = kid(state.visit), f = fam(k.fam), g = first(guards(f)[0]);
     const als = kidAlerts(k.id).slice().reverse();
-    return '<div class="phone"><div><h1>Tudo certo, ' + esc(g) + '!</h1><p class="sub">' + esc(k.name) + ' já está na sala ' + esc(room(k.room).name) + '. Sejam bem-vindos!</p></div>' +
-      '<section class="pkid"><div><h3>QR Code de retirada</h3><p class="meta">Mostre este código à equipe na saída. Só quem fez o cadastro pode retirar a criança.</p></div>' + qr(k.code) + '</section>' +
+    return '<div class="phone"><div class="vok">' + IC.check + '<h1>Tudo certo, ' + esc(g) + '!</h1><p class="sub">O check-in de ' + esc(k.name.split(' ')[0]) + ' foi confirmado. Sejam bem-vindos!</p></div>' +
+      '<section class="ticket"><div class="th">' + avatar(k, 'lg') + '<div><strong>' + esc(k.name) + '</strong><small>' + esc(k.age) + ' · Sala ' + esc(room(k.room).name) + '</small></div></div>' +
+      '<div class="tb"><p class="sec">QR Code de retirada</p>' + qr(k.code) + '<div class="code">' + esc(k.code) + '</div><p class="meta">Mostre este código à equipe na saída. Só quem fez o cadastro pode retirar a criança. Dica: tire um print desta tela.</p></div></section>' +
       '<p class="meta">Deixe esta página aberta durante o culto. Se a equipe precisar de você, o aviso aparece aqui e, se você permitir notificações no navegador, também chega como notificação. Você não precisou baixar nenhum aplicativo.</p>' +
       '<p class="sec">Avisos da equipe</p>' + (als.length ? als.map(a => alertCard(a, true)).join('') : '<p class="hint">Ainda não há avisos.</p>') +
-      '<div class="actions"><button type="button" class="btn primary" data-newvisit>Cadastrar outro visitante</button></div></div>';
+      '<div class="actions"><button type="button" class="btn primary wide" data-newvisit>Cadastrar outra criança</button></div></div>';
   }
-  return '<div class="phone"><div><h1>Que bom ter vocês aqui!</h1><p class="sub">Primeira vez no Verbo Crianças? Preencha em um minuto. Não precisa baixar aplicativo.</p></div>' +
+  return '<div class="phone"><section class="vwelcome"><h1>Que bom ter vocês aqui!</h1><p>Primeira vez no Verbo Crianças? Faça o check-in em um minuto, sem baixar aplicativo.</p><div class="vsteps"><span>1 · Seus dados</span><span>2 · Seu filho</span><span>3 · QR Code</span></div></section>' +
     '<form class="form" id="vf" autocomplete="off">' +
-    '<label>Seu nome<input type="text" id="v-g" placeholder="Nome do responsável"></label>' +
-    '<label>Telefone<input type="tel" id="v-p" placeholder="(00) 90000-0000"></label>' +
-    '<label>Nome da criança<input type="text" id="v-n"></label>' +
+    '<p class="sec">Seus dados</p>' +
+    '<label>Seu nome<input type="text" id="v-g" placeholder="Nome do responsável" maxlength="80" autocomplete="off"></label>' +
+    '<label>Telefone com DDD<input type="tel" id="v-p" placeholder="(00) 90000-0000" maxlength="30" inputmode="tel"></label>' +
+    '<p class="sec">Seu filho ou filha</p>' +
+    '<label>Nome da criança<input type="text" id="v-n" maxlength="80"></label>' +
     '<label>Idade<select id="v-a">' + ageOpts(3) + '</select></label>' +
-    '<label>Alergias ou cuidados<textarea id="v-note" rows="2" placeholder="Opcional"></textarea></label>' +
+    '<label>Alergias ou cuidados<textarea id="v-note" rows="2" maxlength="300" placeholder="Opcional. Ex.: alergia a amendoim"></textarea></label>' +
     '<label class="check"><input type="checkbox" id="v-ok"><span>Autorizo o uso destes dados apenas para o cuidado da criança durante o culto, conforme a LGPD.</span></label>' +
-    '<button type="submit" class="btn primary wide">Fazer check-in</button></form></div>';
+    '<button type="submit" class="btn primary wide big">Fazer check-in</button></form></div>';
 }
 
 let submitting = false;
@@ -670,6 +739,7 @@ document.addEventListener('click', e => {
   }
   if ('toggle' in d) { if (!state.open && staleN()) endService(); state.open = !state.open; log(actor(), state.open ? 'Check-in aberto para o culto.' : 'Check-in fechado.'); render(); toast(state.open ? 'Check-in aberto. As famílias já podem entrar.' : 'Check-in fechado.'); return; }
   if (d.gs) { state.g = d.gs; state.notice = null; return render(); }
+  if (d.ff) { state.ff = d.ff; return render(); }
   if (d.fedit) { state.fedit = state.fedit === d.fedit ? null : d.fedit; return render(); }
   if (d.grm) {
     const [fid, ix] = d.grm.split(':'), f = FAMS.find(x => x.id === fid), i = +ix;
@@ -742,7 +812,7 @@ document.addEventListener('click', e => {
     if (!byCode && !s.nocode) { s.codeErr = true; render(); return; }
     if (k.status !== 'in') { state.sheet = null; render(); toast('Esta criança já não está em sala.'); return; }
     const gn = g.split(' (')[0];
-    k.status = 'left'; k.out = now(); state.sheet = null;
+    k.status = 'left'; k.out = now(); k.pick = gn; state.sheet = null;
     log(tia().name, 'Check-out de ' + k.name + ' com ' + gn + (byCode ? ' (código conferido).' : ' (sem código, documento conferido).')); render();
     toast(k.name.split(' ')[0] + ' saiu com ' + gn); return;
   }
@@ -860,8 +930,25 @@ document.addEventListener('submit', e => {
     state.eform = false; render(); toast('Evento publicado na agenda dos pais.'); return;
   }
 });
+function resizePhoto(file) {
+  return new Promise((ok, no) => {
+    const img = new Image(), u = URL.createObjectURL(file);
+    img.onload = () => {
+      const sz = 160, c = document.createElement('canvas'); c.width = c.height = sz;
+      const m = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, sz, sz);
+      URL.revokeObjectURL(u); const d = c.toDataURL('image/jpeg', 0.7); d.length <= 30000 ? ok(d) : no(new Error('grande'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); no(new Error('imagem')); };
+    img.src = u;
+  });
+}
 document.addEventListener('change', e => {
   const ds = e.target.dataset || {};
+  if (ds.photo) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    resizePhoto(f).then(url => { const k = KIDS.find(x => x.id === ds.photo); if (k) { k.photo = url; render(); toast('Foto atualizada.'); } }).catch(() => toast('Não foi possível usar esta foto. Tente outra.'));
+    return;
+  }
   if (ds.ulink) {
     const u = USERS.find(x => x.id === ds.ulink); if (!u) return;
     u.fam = e.target.value; log(actor(), u.fam ? 'Vinculou ' + u.name + ' à família ' + fam(u.fam).name + '.' : 'Desvinculou ' + u.name + ' de uma família.');
@@ -888,7 +975,8 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('input', e => {
-  if (e.target.id === 'g-q') { state.gq = e.target.value; $('#flist').innerHTML = famCards(); }
+  if (e.target.id === 'g-q') { state.gq = e.target.value; $('#flist').innerHTML = famTable(); }
+  if (e.target.id === 'a-q') { state.aq = e.target.value; $('#alist').innerHTML = acessosTable(); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.sheet) { state.sheet = null; render(); } });
 

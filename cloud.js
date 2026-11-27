@@ -27,7 +27,7 @@
   const S = (v, n) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, n);
   function clean(col, o) {
     const txt = (keys, n) => keys.forEach(k => { if (k in o) o[k] = S(o[k], n); });
-    if (col === 'kids') { txt(['name', 'note', 'obs'], 300); txt(['age', 'room', 'fam', 'by', 'code', 'day'], 100); txt(['time', 'out'], 5); if ('status' in o && !['in', 'out', 'left'].includes(o.status)) o.status = 'out'; }
+    if (col === 'kids') { txt(['name', 'note', 'obs'], 300); txt(['age', 'room', 'fam', 'by', 'code', 'day', 'pick'], 100); if ('photo' in o && !(typeof o.photo === 'string' && o.photo.length <= 30000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(o.photo))) o.photo = ''; if ('visits' in o) o.visits = Array.isArray(o.visits) ? o.visits.slice(-60).map(v => ({ d: S(v && v.d, 10), i: S(v && v.i, 5), o: S(v && v.o, 5) })) : []; txt(['time', 'out'], 5); if ('status' in o && !['in', 'out', 'left'].includes(o.status)) o.status = 'out'; }
     else if (col === 'families') { txt(['name', 'phone'], 100); o.guardians = Array.isArray(o.guardians) ? o.guardians.slice(0, 20).map(g => S(g, 100)) : []; }
     else if (col === 'alerts') { txt(['text'], 500); txt(['time', 'kid', 'fam', 'by'], 100); if ('reply' in o) o.reply = o.reply === true; if ('seen' in o) o.seen = o.seen === true; if ('at' in o) o.at = +o.at || 0; }
     else if (col === 'events') { txt(['day', 'mon', 'w', 't', 'n'], 80); txt(['note'], 300); if ('ts' in o) o.ts = +o.ts || 0; }
