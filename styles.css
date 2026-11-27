@@ -205,7 +205,7 @@ th { font-family: var(--font-display); font-size: 13px; color: var(--navy); text
 .opts input { width: 20px; height: 20px; accent-color: var(--navy); }
 .block { background: var(--coral-soft); color: var(--coral-ink); border-radius: var(--r-field); padding: var(--s3); font-weight: 700; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--navy); color: #fff; padding: var(--s3) var(--s4); border-radius: 999px; font-weight: 700; z-index: 30; max-width: calc(100% - 32px); text-align: center; }
-@media (max-width: 520px) { .stat b { font-size: 30px; } .logo { font-size: 26px; } }
+@media (max-width: 520px) { .stat b { font-size: 30px; } }
 
 /* login */
 .loginbox { max-width: 440px; margin: var(--s5) auto; display: grid; gap: var(--s4); }
@@ -240,7 +240,6 @@ body.mobile { padding: 0; background: #e8eef5; }
   .app > .appbar { padding-top: var(--s4); }
 }
 .loginapp .hero { background: var(--navy); color: #fff; padding: calc(var(--s6) + env(safe-area-inset-top, 0px)) var(--s5) var(--s6); border-radius: 0 0 28px 28px; display: grid; gap: var(--s3); }
-.loginapp .hero .logo { font-size: 36px; }
 .loginapp .hero p { color: #cfe0f5; font-family: var(--font-display); font-weight: 700; }
 .loginapp .scr { flex: 1; padding-top: var(--s6); }
 .qrcard { justify-items: center; text-align: center; background: var(--surface); }
@@ -369,7 +368,6 @@ tr.edr td, tr.edr:hover td { background: var(--bg); }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .gl-logo { background: var(--navy); border-radius: 22px; padding: var(--s5); display: grid; gap: var(--s2); }
 .gl-logo p { color: #cfe0f5; font-family: var(--font-display); font-weight: 700; }
-.gl-logo .logo { font-size: 34px; }
 
 /* visitante */
 .phone { gap: var(--s5); }
@@ -391,3 +389,8 @@ tr.edr td, tr.edr:hover td { background: var(--bg); }
 .ticket .qr { width: min(250px, 72%); height: auto; aspect-ratio: 1; border: 0; padding: 0; }
 .ticket .code { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: 3px; color: var(--navy); }
 .av.sm { width: 36px; height: 36px; font-size: 11px; letter-spacing: -.3px; }
+
+/* logotipo único: horizontal, mesmo tamanho em todas as páginas */
+.logo, .logo.st { font-size: 28px; flex-direction: column; }
+.logo .line, .logo.st .line { flex-direction: row; align-items: baseline; gap: .3em; }
+.logo .lc, .logo.st .lc { font-size: .72em; }

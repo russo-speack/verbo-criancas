@@ -186,7 +186,7 @@ function toast(msg) {
 const CROWN = '<svg class="cr" viewBox="0 0 44 22" aria-hidden="true" focusable="false"><path d="M0 22L6 4l8 12L22 2l8 14 8-12 6 18z" fill="#ffc928"/></svg>';
 const logo = stacked => '<span class="logo' + (stacked ? ' st' : '') + '" role="img" aria-label="Verbo Crianças">' + CROWN + '<span class="line"><span class="lv">Verbo</span><span class="lc">Crianças</span></span></span>';
 const logoH = () => logo(false);
-const logoS = () => logo(true);
+const logoS = () => logo(false);
 
 function qr(text) {
   const m = makeQR(String(text)), n = m.length, q = 4;
