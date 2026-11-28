@@ -34,7 +34,14 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid == uid || isStaff();
       allow create: if (bootstrapping() && request.auth.uid == uid && request.resource.data.role == 'admin' && request.resource.data.active == true)
         || (isAdmin() && request.resource.data.id == uid && request.resource.data.active == true)
-        || (isStaff() && request.resource.data.id == uid && request.resource.data.role == 'pais' && request.resource.data.active == true);
+        || (isStaff() && request.resource.data.id == uid && request.resource.data.role == 'pais' && request.resource.data.active == true)
+        // tia ou tio se cadastra sozinho, mas a conta nasce desativada e pendente até o administrador autorizar
+        || (authed() && request.auth.uid == uid && request.resource.data.id == uid && request.resource.data.role == 'tia'
+            && request.resource.data.active == false && request.resource.data.get('pending', false) == true
+            && request.resource.data.keys().hasOnly(['id', 'role', 'name', 'login', 'active', 'pending', 'tia', 'fam'])
+            && str(request.resource.data.name, 80) && str(request.resource.data.login, 100)
+            && request.resource.data.get('tia', '') == '' && request.resource.data.get('fam', '') == '');
+      allow delete: if isAdmin();
       allow update: if isAdmin()
         || (isStaff() && resource.data.role == 'pais' && changed().hasOnly(['active', 'replaced']))
         // a própria pessoa registra o consentimento de fotos
@@ -56,11 +63,11 @@ service cloud.firestore {
     }
     match /tias/{id} {
       allow read: if active();
-      allow create, update: if isManager();
+      allow create, update, delete: if isManager();
     }
     match /events/{id} {
       allow read: if active();
-      allow create, update: if isManager();
+      allow create, update, delete: if isManager();
     }
 
     // ---- famílias, crianças e avisos ----
@@ -75,7 +82,7 @@ service cloud.firestore {
             && str(request.resource.data.name, 80) && str(request.resource.data.get('phone', ''), 30)
             && request.resource.data.guardians is list && request.resource.data.guardians.size() == 1
             && str(request.resource.data.guardians[0], 100));
-      allow update: if isStaff();
+      allow update, delete: if isStaff();
     }
 
     match /kids/{id} {
@@ -94,9 +101,10 @@ service cloud.firestore {
             && str(request.resource.data.get('time', ''), 5) && str(request.resource.data.get('out', ''), 5) && str(request.resource.data.get('day', ''), 10)
             && exists(/databases/$(db)/documents/rooms/$(request.resource.data.room))
             && getAfter(/databases/$(db)/documents/families/$(request.resource.data.fam)).data.get('owner', '') == request.auth.uid);
+      allow delete: if isStaff();
       allow update: if isStaff()
-        // a tia só mexe na presença (check-in e check-out)
-        || (isTia() && changed().hasOnly(['status', 'time', 'out', 'by', 'day', 'pick']))
+        // a tia só mexe na presença (check-in, check-out e troca de sala)
+        || (isTia() && changed().hasOnly(['status', 'time', 'out', 'by', 'day', 'pick', 'room', 'moved']))
         // o responsável só faz o check-in dos próprios filhos, e só com o check-in aberto
         || (isPais() && resource.data.fam == myFam() && request.resource.data.fam == resource.data.fam
             && changed().hasOnly(['status', 'time', 'out', 'by', 'day'])

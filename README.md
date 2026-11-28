@@ -14,23 +14,17 @@ São **três apps**, cada um na sua própria página, com a identidade visual do
 - **Tia ou tio que também é pai ou mãe:** usa uma conta só. Em **Gestão > Acessos**, o administrador escolhe a família na linha da tia (ou no formulário de novo acesso). Daí em diante, o app abre na equipe e mostra no topo a troca **Equipe | Minha família**. Quem não tem os dois papéis não vê a troca.
 - Quem entra no endereço errado não passa: uma conta da Gestão não abre o app das famílias, e uma conta de família não abre a Gestão.
 
-No protótipo, os apps conversam entre si na mesma aba do navegador. Com o Firebase, passam a conversar entre aparelhos.
 
-## Modo protótipo (sem Firebase): contas de exemplo
+## Sem dados de exemplo
 
-A tela de login de cada app mostra as contas de exemplo, com o botão **Preencher**.
+O sistema começa **vazio**: não há contas, famílias, crianças nem eventos de exemplo. Sem o Firebase ligado, as telas mostram só o aviso "Falta conectar o sistema". Ligue o Firebase (seção abaixo) e crie o primeiro administrador.
 
-| App | Perfil | Entrada | Senha |
-| --- | --- | --- | --- |
-| Verbo Crianças | Responsável (Maria Souza) | maria@email.example | souza123 |
-| Verbo Crianças | Responsável (Carla Almeida) | carla@email.example | almeida123 |
-| Verbo Crianças | Tia Raquel | raquel@verbo.example | raquel123 |
-| Verbo Crianças | Tia Joana | joana@verbo.example | joana123 |
-| Gestão | Administrador | admin@verbo.example | admin123 |
-| Gestão | Coordenação | coord@verbo.example | coord123 |
-| Gestão | Recepção | recepcao@verbo.example | recepcao123 |
+## Cadastro e autorização da equipe
 
-Há mais contas de exemplo nas telas de login.
+- A tia ou o tio abre o app das famílias e toca em **Sou da equipe e quero me cadastrar**, informando nome, e-mail e senha.
+- A conta nasce **pendente**: a pessoa não entra até o administrador autorizar.
+- Em **Gestão > Acessos** aparece o quadro **Aguardando autorização**. O administrador escolhe a sala (e, se a pessoa também for responsável por crianças, a família) e toca em **Autorizar** ou **Recusar**.
+- O administrador também pode criar o acesso direto, em **Gestão > Acessos**.
 
 **O que cada perfil da gestão vê:**
 
@@ -53,7 +47,7 @@ Mantenha tudo na mesma pasta, como está.
 
 ## Como publicar no GitHub e testar
 
-1. No GitHub, clique em **New repository**, dê um nome (por exemplo `verbo-criancas`) e deixe **Public**. No plano gratuito, o GitHub Pages só funciona em repositório público. O protótipo só tem dados de exemplo.
+1. No GitHub, clique em **New repository**, dê um nome (por exemplo `verbo-criancas`) e deixe **Public**. No plano gratuito, o GitHub Pages só funciona em repositório público. 
 2. Na página do repositório, clique em **Add file > Upload files**, arraste os arquivos desta pasta e clique em **Commit changes**.
 3. Vá em **Settings > Pages**. Em **Build and deployment**, escolha **Deploy from a branch**, branch **main** e pasta **/ (root)**, e salve.
 4. Depois de um ou dois minutos, o endereço aparece nessa mesma tela, no formato `https://SEU-USUARIO.github.io/verbo-criancas/`.
@@ -61,7 +55,6 @@ Mantenha tudo na mesma pasta, como está.
 
 Para testar no celular, abra o endereço no navegador. A página pede internet apenas para carregar as fontes Nunito.
 
-No modo protótipo, o login é simulado: as senhas de exemplo ficam visíveis no código e nada é guardado. Ao recarregar a página, tudo volta ao início, e a notificação aparece só dentro da página. Isso serve para testar telas e fluxos. Para dados reais, ligue ao Firebase.
 
 ## Ligar ao Firebase (plano gratuito)
 
@@ -123,7 +116,7 @@ Como funciona: o aparelho dos pais se inscreve e guarda a inscrição no Firesto
 - **Avisos:** sem o passo "Avisos com o app fechado" (abaixo), a notificação aparece no aparelho só **enquanto o app estiver aberto**, mesmo em segundo plano. Com esse passo, ela chega também com o app fechado e o celular bloqueado. Visitantes (QR Code) recebem os avisos só dentro da página.
 - **Notificação no iPhone** só funciona depois de **adicionar o site à tela inicial** (Compartilhar > Adicionar à Tela de Início) e abrir por esse ícone.
 - A **lotação das salas** que pais e visitantes veem é atualizada quando alguém da equipe está com o app aberto. A trava de sala lotada é feita no aparelho, não no servidor.
-- O **relatório de domingos anteriores** ainda usa números de exemplo. Os dados de hoje são reais.
+- O **relatório de domingos** começa vazio e se enche a cada culto encerrado.
 - Qualquer pessoa conectada consegue **escrever** no registro de ações, mas só o administrador lê. O cadastro pelo QR Code de visitante é aberto por natureza: confira as famílias novas na Gestão.
 - Cota gratuita do Firestore: 50 mil leituras e 20 mil gravações por dia. Costuma bastar para uma igreja pequena. Mais crianças e salas abertas ao mesmo tempo gastam mais.
 - Nada foi testado com o seu projeto real. Se algo recusar gravar, a tela avisa e o console do navegador mostra o motivo.
@@ -148,3 +141,11 @@ Como funciona: o aparelho dos pais se inscreve e guarda a inscrição no Firesto
 - **Gestão**: barra lateral, indicadores, gráfico de frequência, tabelas com busca e filtros; funciona em computador e tablet.
 - **Visitante**: boas-vindas, campos grandes e "ingresso" com QR Code de retirada.
 - **Republique o `firestore.rules`** de novo: ele agora aceita foto do filho e o campo de quem retirou a criança.
+
+## Atualização de 27/11/2026
+
+- **Agenda:** eventos podem ser alterados e excluídos.
+- **Famílias:** editar dados da família e da criança, incluir e excluir.
+- **Cadastro da equipe com autorização** e **dados de exemplo removidos** (veja acima).
+- **Estilo MyKids:** contagem de check-ins, em sala e check-outs; check-in fechado com horário de início ("Sente a paz desse lugar"); responsável com Ligar e WhatsApp; "Cuidados da criança"; transferência de sala; "Check-in realizado!".
+- **Publique de novo** o `firestore.rules` (passo 7) para valer o cadastro de equipe pendente e a troca de sala.

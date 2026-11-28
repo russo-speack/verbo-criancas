@@ -4,12 +4,7 @@ const ROOMS = [
   { id: 'juniores', name: 'Juniores', ages: '5 a 7 anos', cap: 10 },
   { id: 'kids', name: 'Kids', ages: '8 a 11 anos', cap: 12 }
 ];
-const TIAS = [
-  { id: 't1', name: 'Tia Raquel', room: 'bercario' },
-  { id: 't2', name: 'Tia Joana', room: 'maternal' },
-  { id: 't3', name: 'Tio Mateus', room: 'juniores' },
-  { id: 't4', name: 'Tia Lia', room: 'kids' }
-];
+const TIAS = [];
 /* Acessos. Cada app tem o seu login, e a gestão tem perfis com permissões diferentes. */
 const ROLES = { pais: 'Responsável', tia: 'Equipe de sala', recepcao: 'Recepção', coord: 'Coordenação', admin: 'Administrador' };
 const STAFF_ROLES = ['recepcao', 'coord', 'admin'];
@@ -19,57 +14,20 @@ const PERMS = {
   coord: ['painel', 'familias', 'equipe', 'agenda', 'relatorios'],
   admin: ['painel', 'familias', 'equipe', 'agenda', 'relatorios', 'acessos', 'registro']
 };
-// Contas de exemplo do protótipo. No sistema real a senha nunca fica no código: ela é conferida no servidor.
-const USERS = [
-  { id: 'u1', role: 'pais', name: 'Maria Souza', login: 'maria@email.example', phone: '(00) 90000-0001', pass: 'souza123', active: true, fam: 'souza' },
-  { id: 'u2', role: 'pais', name: 'Carla Almeida', login: 'carla@email.example', phone: '(00) 90000-0002', pass: 'almeida123', active: true, fam: 'almeida' },
-  { id: 'u3', role: 'pais', name: 'Rafael Ferreira', login: 'rafael@email.example', phone: '(00) 90000-0003', pass: 'ferreira123', active: true, fam: 'ferreira' },
-  { id: 'u4', role: 'pais', name: 'Ana Costa', login: 'ana@email.example', phone: '(00) 90000-0004', pass: 'costa123', active: true, fam: 'costa' },
-  { id: 'u5', role: 'pais', name: 'Bruno Lima', login: 'bruno@email.example', phone: '(00) 90000-0005', pass: 'lima123', active: true, fam: 'lima' },
-  { id: 'u6', role: 'tia', name: 'Tia Raquel', login: 'raquel@verbo.example', pass: 'raquel123', active: true, tia: 't1' },
-  { id: 'u7', role: 'tia', name: 'Tia Joana', login: 'joana@verbo.example', pass: 'joana123', active: true, tia: 't2' },
-  { id: 'u8', role: 'tia', name: 'Tio Mateus', login: 'mateus@verbo.example', pass: 'mateus123', active: true, tia: 't3', fam: 'ferreira' },
-  { id: 'u9', role: 'tia', name: 'Tia Lia', login: 'lia@verbo.example', pass: 'lia123', active: true, tia: 't4' },
-  { id: 'u10', role: 'admin', name: 'Paulo Mendes', login: 'admin@verbo.example', pass: 'admin123', active: true },
-  { id: 'u11', role: 'coord', name: 'Débora Dias', login: 'coord@verbo.example', pass: 'coord123', active: true },
-  { id: 'u12', role: 'recepcao', name: 'Lúcia Prado', login: 'recepcao@verbo.example', pass: 'recepcao123', active: true }
-];
+const USERS = [];
 const MODE = (document.body && document.body.dataset.app) || 'familia';
 const LOGIN_COPY = {
   familia: { label: 'Telefone ou e-mail', sub: 'Entre com o acesso que a igreja cadastrou. O app abre sozinho na área certa, seja você da família ou da equipe.', hint: 'Famílias entram com o telefone cadastrado. A equipe, com o e-mail.', empty: 'Informe o telefone ou e-mail e a senha.', wrong: 'Telefone, e-mail ou senha incorretos.' },
   gestao: { label: 'E-mail', sub: 'Cadastros, salas, equipe, agenda e relatórios. Cada perfil vê só o que pode usar.', hint: 'Entre com o e-mail do seu acesso.', empty: 'Informe o e-mail e a senha.', wrong: 'E-mail ou senha incorretos.' }
 };
 
-const FAMS = [
-  { id: 'souza', name: 'Souza', phone: '(00) 90000-0001', guardians: ['Maria Souza (mãe)', 'João Souza (pai)', 'Dona Leila (avó)'] },
-  { id: 'almeida', name: 'Almeida', phone: '(00) 90000-0002', guardians: ['Carla Almeida (mãe)', 'Tia Renata (madrinha)'] },
-  { id: 'ferreira', name: 'Ferreira', phone: '(00) 90000-0003', guardians: ['Rafael Ferreira (pai)', 'Paula Ferreira (mãe)'] },
-  { id: 'costa', name: 'Costa', phone: '(00) 90000-0004', guardians: ['Ana Costa (mãe)', 'Marcos Costa (pai)'] },
-  { id: 'lima', name: 'Lima', phone: '(00) 90000-0005', guardians: ['Bruno Lima (pai)', 'Sônia Lima (avó)'] }
-];
-const KIDS = [
-  { id: 'k1', name: 'Davi Souza', age: '4 anos', room: 'maternal', fam: 'souza', note: '', obs: '', status: 'in', time: '09:02', out: '', by: 'Maria Souza', code: 'DAVI-4821' },
-  { id: 'k2', name: 'Lívia Souza', age: '1 ano', room: 'bercario', fam: 'souza', note: 'Alergia a leite de vaca e derivados', obs: 'Dorme com a chupeta', status: 'in', time: '09:02', out: '', by: 'Maria Souza', code: 'LIVI-1937' },
-  { id: 'k3', name: 'Pedro Almeida', age: '6 anos', room: 'juniores', fam: 'almeida', note: '', obs: '', status: 'in', time: '09:05', out: '', by: 'Carla Almeida', code: 'PEDR-7710' },
-  { id: 'k4', name: 'Sofia Ferreira', age: '9 anos', room: 'kids', fam: 'ferreira', note: '', obs: '', status: 'in', time: '09:08', out: '', by: 'Rafael Ferreira', code: 'SOFI-3302' },
-  { id: 'k5', name: 'Miguel Ferreira', age: '6 anos', room: 'juniores', fam: 'ferreira', note: 'Alergia a amendoim', obs: '', status: 'in', time: '09:08', out: '', by: 'Rafael Ferreira', code: 'MIGU-5568' },
-  { id: 'k6', name: 'Helena Costa', age: '3 anos', room: 'maternal', fam: 'costa', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: 'HELE-2094' },
-  { id: 'k7', name: 'Théo Lima', age: '2 anos', room: 'bercario', fam: 'lima', note: '', obs: '', status: 'out', time: '', out: '', by: '', code: 'THEO-6641' },
-  { id: 'k8', name: 'Arthur Lima', age: '8 anos', room: 'kids', fam: 'lima', note: '', obs: '', status: 'left', time: '09:10', out: '10:12', by: 'Bruno Lima', code: 'ARTH-9150' }
-];
+const FAMS = [];
+const KIDS = [];
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const WEEK = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 const nextDow = (dow, add) => { const d = startOfToday(); d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7) + (add || 0) * 7); return d; };
-const mkEv = (d, t, n, note) => ({ ts: d.getTime(), day: String(d.getDate()).padStart(2, '0'), mon: MONTHS[d.getMonth()], w: WEEK[d.getDay()], t, n, note });
-const EVENTS = [
-  mkEv(nextDow(0, 0), '9h', 'Culto infantil', 'Check-in a partir das 8h30.'),
-  mkEv(nextDow(3, 0), '19h30', 'Encontro de pais', 'Conversa com a coordenação infantil sobre rotina e cuidado.'),
-  mkEv(nextDow(0, 1), '9h', 'Culto infantil', 'Se a criança tiver Bíblia, pode trazer.'),
-  mkEv(nextDow(0, 2), '9h', 'Culto infantil', 'Dia de histórias em família.')
-];
-const pastSun = n => { const d = nextDow(0, 0); d.setDate(d.getDate() - 7 * n); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
-KIDS.forEach(k => { if (k.id !== 'k6' && k.id !== 'k7') k.visits = [3, 2, 1].map(n => ({ d: pastSun(n), i: '09:0' + n, o: '10:' + (50 + n) })); });
+const EVENTS = [];
 // data do evento: usa o carimbo gravado; eventos antigos sem carimbo são lidos pelo dia e mês
 const evTs = e => {
   if (e.ts) return e.ts;
@@ -82,10 +40,7 @@ const upcoming = () => EVENTS.filter(e => evTs(e) >= startOfToday().getTime()).s
 const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const todayShort = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
 const todayLong = () => new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
-const PAST = [
-  { d: '25/10', c: 38, v: 2, avg: '1h 48min' }, { d: '18/10', c: 44, v: 5, avg: '1h 55min' },
-  { d: '11/10', c: 36, v: 1, avg: '1h 42min' }, { d: '04/10', c: 41, v: 3, avg: '1h 50min' }
-];
+const PAST = [];
 const QUICK = [
   { key: 'choro', label: 'Chorando', text: n => n + ' está chorando e não se acalma. Pode vir até a sala?' },
   { key: 'fralda', label: 'Trocar fralda', text: n => 'Precisamos trocar a fralda de ' + n + '. Pode vir até a sala?' },
@@ -94,12 +49,12 @@ const QUICK = [
   { key: 'livre', label: 'Mensagem livre', text: n => '' }
 ];
 const newP = () => ({ tab: 'home', screen: null, sel: [], ckid: null, card: null, done: [] });
-const newT = () => ({ tab: 'sala', screen: null, room: null, kid: null });
+const newT = () => ({ tab: 'sala', screen: null, room: null, kid: null, q: '' });
 const state = {
-  mode: 'equipe', hist: [], fedit: null, ff: 'todas', aq: '',
+  mode: 'equipe', hist: [], fedit: null, ff: 'todas', aq: '', svc: 'Culto infantil', opens: '', eedit: null, kedit: null, lreg: false, lok: '',
   fam: 'souza', sheet: null, visit: null, vn: 0, open: true, p: newP(), t: newT(), tia: 't2',
   g: 'painel', gq: '', gform: false, eform: false, alerts: [], audit: [],
-  sess: { pais: null, tias: null, gestao: null }, lerr: { familia: null, gestao: null }, lval: { familia: '', gestao: '' },
+  sess: { pais: null, tias: null, gestao: null }, lerr: { familia: null, gestao: null, reg: null }, lval: { familia: '', gestao: '' },
   notice: null, aform: false, af: 'todos',
   prefs: { fotos: false }
 };
@@ -235,24 +190,27 @@ const bandBack = (title, sub) => '<div class="appbar"><div class="back"><button 
 const bandTia = t => '<div class="appbar">' + logoS() + '<div class="rolewrap"><div class="role"><strong>' + esc(t.name) + '</strong><small>Equipe · ' + room(t.room).name + '</small></div><button type="button" class="iconbtn" data-logout aria-label="Sair da conta">' + IC.out + '</button></div></div>';
 
 /* ================= LOGIN ================= */
-function demoCard(app) {
-  if (cloudOn()) return '';
-  const list = USERS.filter(u => appRoles(app).includes(u.role));
-  return '<section class="card"><p class="sec">Contas de exemplo</p>' + list.map(u =>
-    '<div class="demo"><div><strong>' + esc(u.name) + '</strong>' + ' <span class="chip">' + ROLES[u.role] + (u.fam && u.role === 'tia' ? ' + família' : '') + '</span>' +
-    '<div class="meta">' + esc(u.login || u.phone) + ' · senha ' + esc(u.pass) + (u.active ? '' : ' · desativada') + '</div></div>' +
-    '<button type="button" class="link" data-fill="' + esc(u.id) + '">Preencher</button></div>').join('') +
-    '<p class="hint">Protótipo com contas de exemplo. No sistema real, a senha é conferida no servidor e nunca aparece na tela.</p></section>';
+function setupHint() {
+  if (cloudOn() || USERS.length) return '';
+  return '<section class="card"><p class="sec">Falta conectar o sistema</p><p class="meta">Este endereço ainda não está ligado ao Firebase. Preencha o arquivo firebase-config.js, como explica o README, e publique de novo.</p></section>';
+}
+
+function regForm() {
+  const err = state.lerr.reg;
+  return '<form class="form" id="rg" novalidate><p class="sec">Cadastro da equipe</p><label>Nome<input type="text" id="rg-n" maxlength="80" autocomplete="name"></label><label>E-mail<input type="text" id="rg-e" inputmode="email" autocapitalize="none" autocomplete="username"></label><label>Crie uma senha (mínimo 8 caracteres)<input type="password" id="rg-p" autocomplete="new-password"></label>' +
+    (err ? '<div class="block" role="alert">' + esc(err) + '</div>' : '') + '<button type="submit" class="btn primary wide">Enviar cadastro</button><button type="button" class="link" data-regback>Voltar para o login</button></form>' +
+    '<p class="hint">Depois de enviar, o administrador precisa autorizar o seu acesso. Você será avisado ao tentar entrar.</p>';
 }
 
 function loginForm(app) {
   const c = LOGIN_COPY[app], err = state.lerr[app];
-  return '<form class="form" id="lf-' + app + '" data-app="' + app + '" novalidate>' +
+  return (app === 'familia' && state.lok ? '<div class="okmsg" role="status">' + esc(state.lok) + '</div>' : '') + '<form class="form" id="lf-' + app + '" data-app="' + app + '" novalidate>' +
     '<label>' + c.label + '<input type="text" id="l-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(state.lval[app]) + '"></label>' +
     '<label>Senha<span class="passrow"><input type="password" id="l-pass" name="password" autocomplete="current-password"><button type="button" class="link" data-showpass>Mostrar</button></span></label>' +
     (err ? '<div class="block" role="alert">' + esc(err) + '</div>' : '') +
     '<button type="submit" class="btn primary wide">Entrar</button>' +
-    '<button type="button" class="link" data-forgot>Esqueci minha senha</button></form>';
+    '<button type="button" class="link" data-forgot>Esqueci minha senha</button>' +
+    (app === 'familia' && cloudOn() ? '<button type="button" class="link" data-regtia>Sou da equipe e quero me cadastrar</button>' : '') + '</form>';
 }
 
 function setupBox() {
@@ -264,9 +222,9 @@ function setupBox() {
 
 function appLogin(app) {
   const c = LOGIN_COPY[app];
-  if (app === 'gestao') return '<div class="loginbox"><div class="gl-logo">' + logoH() + '<p>Aprender. Adorar. Crescer com Jesus.</p></div><div><h1>Entrar na Gestão</h1><p class="sub">' + c.sub + '</p></div>' + (cloudOn() && Cloud.needsSetup ? setupBox() : loginForm(app)) + demoCard(app) + '</div>';
+  if (app === 'gestao') return '<div class="loginbox"><div class="gl-logo">' + logoH() + '<p>Aprender. Adorar. Crescer com Jesus.</p></div><div><h1>Entrar na Gestão</h1><p class="sub">' + c.sub + '</p></div>' + (cloudOn() && Cloud.needsSetup ? setupBox() : loginForm(app)) + setupHint() + '</div>';
   return '<div class="app loginapp"><div class="hero">' + logoH() + '<p>Aprender. Adorar. Crescer com Jesus.</p></div>' +
-    '<div class="scr"><div><h1>Entrar</h1><p class="sub">' + c.sub + '</p></div>' + loginForm(app) + demoCard(app) + '</div></div>';
+    '<div class="scr"><div><h1>Entrar</h1><p class="sub">' + c.sub + '</p></div>' + (state.lreg ? regForm() : loginForm(app)) + setupHint() + '</div></div>';
 }
 
 /* ================= APP DOS PAIS ================= */
@@ -278,7 +236,8 @@ function kidCard(k) {
 }
 function checkinCard(mine) {
   const pend = mine.filter(k => k.status === 'out'), p = state.p;
-  if (!state.open) return '<section class="cico closed"><div class="hero wait" style="padding:0">' + IC.clock + '<h3>Check-in ainda fechado</h3><p>A equipe ainda não abriu o check-in. Volte em alguns minutinhos.</p></div></section>';
+  if (!state.open) return '<section class="cico closed"><div class="hero wait" style="padding:0">' + IC.clock + '<h3>Sente a paz desse lugar</h3><p>' + (state.opens ? 'O check-in terá início às ' + esc(state.opens) + '.' : 'A equipe ainda não abriu o check-in.') + ' Por favor, aguarde.</p></div></section>';
+  if (!mine.length) return '';
   if (!pend.length) return '<section class="cico ok"><h3>Tudo certo por aqui!</h3><p class="meta">' + (mine.some(k => k.status === 'in') ? 'Seus filhos já estão na sala. Bom culto!' : 'Nenhum check-in pendente.') + '</p></section>';
   return '<section class="cico"><div><h3>Check-in</h3><p class="meta">Marque quem vai para a sala.</p></div>' +
     pend.map(k => '<label class="pick"><input type="checkbox" data-pick="' + esc(k.id) + '"' + (p.sel.includes(k.id) ? ' checked' : '') + '>' + avatar(k) + '<span><strong>' + esc(k.name) + '</strong><span class="meta">' + esc(room(k.room).name) + '</span></span></label>').join('') +
@@ -292,20 +251,21 @@ function historyBlock(mine) {
   }).join('');
 }
 
+const noKids = '<section class="card"><p class="sec">Seus filhos</p><p class="hint">Ainda não há crianças cadastradas nesta família. Fale com a coordenação infantil.</p></section>';
 function tabHome(f, mine) {
   const ids = mine.map(k => k.id), ev = upcoming()[0], me = sessUser('pais') || sessUser('tias');
   const last = liveAlerts().filter(a => ids.includes(a.kid)).slice(-1)[0];
   const total = mine.reduce((n, k) => n + visitsOf(k).length, 0);
   return '<section class="hello"><small>' + esc(todayLong()) + '</small><h2>Olá, ' + esc(first(me ? me.name : f.name)) + '!</h2><p>Família ' + esc(f.name) + ' · que bom ter vocês aqui.</p></section>' +
     checkinCard(mine) +
-    '<p class="sec">Seus filhos</p>' + mine.map(kidCard).join('') +
+    (mine.length ? '<p class="sec">Seus filhos</p>' + mine.map(kidCard).join('') : noKids) +
     '<section class="card"><p class="sec">Próximo culto</p>' + (ev ? '<div class="ev"><div class="date"><b>' + esc(ev.day) + '</b><small>' + esc(ev.mon) + '</small></div><div><strong>' + esc(ev.n) + '</strong><span class="meta">' + esc(ev.w) + ' · ' + esc(ev.t) + '</span><span class="meta">' + esc(ev.note) + '</span></div></div>' : '<strong>Em breve</strong><span class="meta">A coordenação ainda não publicou o próximo encontro.</span>') + '</section>' +
     '<section class="card"><p class="sec">Avisos e notificações</p>' + (last ? '<span class="time">' + esc(last.time) + ' · ' + esc(kid(last.kid).name) + '</span><span>' + esc(last.text) + '</span><button type="button" class="btn sm" data-tab="avisos">Ver avisos</button>' : '<span class="hint">Nenhum aviso por enquanto. Se a equipe precisar de você, chega aqui e no celular.</span>') + '</section>' +
     '<section class="card"><p class="sec">Participação</p><strong>' + total + (total === 1 ? ' presença registrada' : ' presenças registradas') + '</strong><button type="button" class="btn sm" data-tab="crianca">Ver histórico</button></section>';
 }
 
 function tabCrianca(f, mine) {
-  return '<h2>Minha criança</h2>' + checkinCard(mine) + mine.map(kidCard).join('') + historyBlock(mine);
+  return '<h2>Minha criança</h2>' + (mine.length ? checkinCard(mine) + mine.map(kidCard).join('') + historyBlock(mine) : noKids);
 }
 
 function tabAgenda() {
@@ -327,20 +287,21 @@ function tabAvisos(mine) {
 function screenDone() {
   const p = state.p, names = p.done.map(id => esc(kid(id).name.split(' ')[0]));
   const list = names.length > 1 ? names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1] : names[0];
-  return '<div class="hero">' + IC.check + '<h2>Check-in feito!</h2><p>' + list + (names.length > 1 ? ' já estão' : ' já está') + ' na sala. Fique tranquilo: se precisarmos de você, a equipe avisa por notificação aqui no app.</p></div>' +
+  return '<div class="hero">' + IC.check + '<h2>CHECK-IN REALIZADO!</h2><p><strong>Fique atento, se precisar vamos te chamar!</strong></p><p>' + list + (names.length > 1 ? ' já estão' : ' já está') + ' na sala. O aviso chega por notificação aqui no app.</p></div>' +
     '<button type="button" class="btn wide" data-back>Voltar ao início</button>';
 }
 
 function screenDetail(k, staff) {
   const f = fam(k.fam), phone = f.phone || '';
-  const head = '<div class="kh" style="justify-content:center;flex-direction:column;text-align:center">' + avatar(k, 'xl') + (!staff ? '<label class="btn sm photo">' + IC.cam + 'Trocar foto<input type="file" accept="image/*" data-photo="' + esc(k.id) + '" class="vh"></label>' : '') + '<span>' + statusKid(k) + '</span></div>' + algBox(k);
-  return head + (k.by ? '<p class="sec">Responsável pelo check-in</p><div class="kv"><div class="full"><strong>' + esc(k.by) + '</strong><small>Telefone ' + esc(phone) + '</small></div></div>' : '<p class="hint">Ainda não houve check-in hoje.</p>') +
-    '<div class="care"><strong>Cuidados da criança</strong><span><b>Restrições alimentares:</b> ' + esc(k.note || 'Nenhuma informada') + '</span><span><b>Observações:</b> ' + esc(k.obs || 'Nenhuma') + '</span><span><b>Necessidades específicas:</b> Não informado</span></div>' +
+  const pn = digits(phone), wa = pn.length && pn.length <= 11 ? '55' + pn : pn;
+  const head = '<div class="kh" style="justify-content:center;flex-direction:column;text-align:center">' + avatar(k, 'xl') + (!staff ? '<label class="btn sm photo">' + IC.cam + 'Trocar foto<input type="file" accept="image/*" data-photo="' + esc(k.id) + '" class="vh"></label>' : '') + '<span>' + statusKid(k) + '</span></div>' + algBox(k) + (k.moved ? '<p class="meta" style="text-align:center">Criança transferida de sala por: ' + esc(k.moved) + '</p>' : '');
+  return head + (k.by ? '<p class="sec">Responsável pelo check-in</p><div class="kv"><div class="full"><strong>' + esc(k.by) + '</strong><small>Telefone ' + esc(phone) + '</small></div></div>' + (staff && pn.length >= 8 ? '<div class="actions"><a class="btn sm" href="tel:+' + esc(wa) + '">Ligar</a><a class="btn sm" href="https://wa.me/' + esc(wa) + '" target="_blank" rel="noopener">WhatsApp</a></div>' : '') : '<p class="hint">Ainda não houve check-in hoje.</p>') +
+    '<div class="care"><strong>Cuidados da criança</strong><span><b>Restrições alimentares:</b> ' + esc(k.note || 'Nenhuma informada') + '</span><span><b>Observações:</b> ' + esc(k.obs || 'Nenhuma') + '</span><span><b>Necessidades específicas:</b> ' + esc(k.needs || 'Não informado') + '</span></div>' +
     (k.status !== 'out' ? '<div class="kv"><div><small>Check-in</small><strong>' + esc(k.time) + '</strong></div><div><small>Check-out</small><strong>' + esc(k.out || 'Ainda na sala') + '</strong></div>' +
       '<div class="full"><small>Tempo de permanência</small><strong>' + dur(k.time, k.out || now()) + (k.out ? '' : ' até agora') + '</strong></div>' +
       '<div class="full"><small>Identificação da criança</small><strong>#' + esc(k.code) + '</strong></div></div>' : '') +
     (!staff && k.status === 'in' ? '<div class="pkid"><div><strong>QR Code de retirada</strong><p class="meta" style="margin:4px 0 0">Mostre à equipe na saída.</p></div>' + qr(k.code) + '</div>' : '') +
-    (staff && k.status === 'in' ? '<div class="actions"><button type="button" class="btn hl" data-alert="' + esc(k.id) + '">Avisar pais</button><button type="button" class="btn" data-out="' + esc(k.id) + '">Check-out</button></div>' : '');
+    (staff && k.status === 'in' ? '<div class="actions"><button type="button" class="btn hl" data-alert="' + esc(k.id) + '">Avisar pais</button><button type="button" class="btn" data-out="' + esc(k.id) + '">Check-out</button><button type="button" class="btn" data-move="' + esc(k.id) + '">Transferir de sala</button></div>' : '');
 }
 
 function cloudPerfil() {
@@ -392,6 +353,11 @@ function kidRow(k) {
     '<div class="actions"><button type="button" class="btn hl" data-alert="' + esc(k.id) + '">Avisar pais</button><button type="button" class="btn" data-out="' + esc(k.id) + '">Check-out</button></div></article>';
 }
 
+function tsearch() { return '<label class="tsearch"><span class="vh">Buscar criança</span><input type="text" id="tq" placeholder="Nome da criança" value="' + esc(state.t.q || '') + '" autocomplete="off"></label>'; }
+function tresults() {
+  const q = (state.t.q || '').trim().toLowerCase(), l = KIDS.filter(k => String(k.name).toLowerCase().includes(q));
+  return l.length ? l.map(k => '<article class="kc ' + esc(k.status) + '"><div class="kh">' + avatar(k) + '<div class="kb"><button type="button" class="link name" data-tkid="' + esc(k.id) + '">' + esc(k.name) + '</button><span class="meta">' + esc(k.age) + ' · ' + esc(room(k.room).name) + '</span><span>' + statusKid(k) + '</span></div></div>' + algBox(k) + '</article>').join('') : '<p class="hint">Nenhuma criança com esse nome.</p>';
+}
 function roomView(rid) {
   const r = room(rid), all = KIDS.filter(k => k.room === rid), t = tia(), mineRoom = !!t && t.room === rid;
   const inn = all.filter(k => k.status === 'in'), exp = all.filter(k => k.status === 'out'), lf = all.filter(k => k.status === 'left');
@@ -414,13 +380,14 @@ function renderTia(me) {
   else {
     tabbar = true; head = bandTia(t);
     if (s.tab === 'salas') {
-      body = '<div><h2>Todas as salas</h2><p class="sub">Toque em uma sala para ver as crianças.</p></div>' + ROOMS.map(r => { const c = inRoom(r.id); return '<button type="button" class="roomcard" data-troom="' + esc(r.id) + '"><div class="row"><strong>' + esc(r.name) + '</strong><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + '/' + r.cap + (c >= r.cap ? ' · lotada' : '') + '</span></div><span class="meta">' + esc(r.ages) + '</span></button>'; }).join('');
+      const ent = KIDS.filter(k => k.status !== 'out').length, ins = KIDS.filter(k => k.status === 'in').length, lft = KIDS.filter(k => k.status === 'left').length;
+      body = '<div><h2>' + esc(state.svc) + '</h2><p class="sub">' + esc(todayLong()) + '</p></div><div class="sum3"><div><b>' + ent + '</b><span>check-ins</span></div><div class="in"><b>' + ins + '</b><span>em sala</span></div><div class="out"><b>' + lft + '</b><span>check-out</span></div></div>' + tsearch() + ((s.q || '').trim() ? tresults() : '<p class="sec">Salas</p>' + ROOMS.map(r => { const c = inRoom(r.id); return '<button type="button" class="roomcard" data-troom="' + esc(r.id) + '"><div class="row"><strong>' + esc(r.name) + '</strong><span class="chip' + (c >= r.cap ? ' sun' : '') + '">' + c + '/' + r.cap + (c >= r.cap ? ' · lotada' : '') + '</span></div><span class="meta">' + esc(r.ages) + '</span></button>'; }).join(''));
     } else if (s.tab === 'avisos') {
       const all = liveAlerts().slice().reverse();
       body = '<div><h2>Avisos enviados</h2><p class="sub">Acompanhe quem já respondeu.</p></div>' + (all.length ? all.map(a => '<article class="trow"><div class="time">' + esc(a.time) + ' · ' + esc(a.by || 'Equipe') + '</div><div><strong>' + esc(kid(a.kid).name) + '</strong><div>' + esc(a.text) + '</div></div><span>' + (a.reply ? '<span class="chip ok">Responsável a caminho</span>' : '<span class="chip sun">Sem resposta ainda</span>') + '</span></article>').join('') : '<p class="hint">Ainda não há avisos neste culto.</p>');
     } else if (s.tab === 'visitantes') {
       body = visitorsTab();
-    } else body = roomView(t.room);
+    } else body = tsearch() + ((s.q || '').trim() ? tresults() : roomView(t.room));
   }
   const tb = tabbar ? '<nav class="tabbar" style="--n:4" aria-label="Menu da equipe">' +
     [['sala', 'Minha sala', IC.door], ['salas', 'Todas as salas', IC.grid], ['avisos', 'Avisos', IC.bell], ['visitantes', 'Visitantes', IC.qr]].map(x => '<button type="button" data-ttab="' + x[0] + '"' + (s.tab === x[0] ? ' aria-current="page"' : '') + '>' + x[2] + x[1] + '</button>').join('') + '</nav>' : '';
@@ -465,7 +432,7 @@ function endService() {
   if (prev) { prev.c += row.c; prev.v += row.v; prev.avg = row.avg; prev.ts = row.ts; } else state.hist.push(row);
   act.forEach(k => {
     if (k.time && !visitsOf(k).some(v => v.d === label)) k.visits = visitsOf(k).concat({ d: label, i: k.time, o: k.out || now() }).slice(-60);
-    k.status = 'out'; k.time = ''; k.out = ''; k.by = ''; k.day = ''; if (k.pick) k.pick = '';
+    k.status = 'out'; k.time = ''; k.out = ''; k.by = ''; k.day = ''; if (k.pick) k.pick = ''; if (k.moved) k.moved = '';
   });
   state.open = false;
   log(actor(), 'Culto encerrado: ' + row.c + ' crianças, ' + row.v + ' visitantes.');
@@ -484,6 +451,11 @@ function freqChart() {
   }).join('') + '</div><div class="legend"><span><i style="background:var(--navy)"></i>Crianças</span><span><i style="background:var(--yellow)"></i>Visitantes</span><span><i style="background:var(--sky)"></i>Culto de hoje</span></div>';
 }
 
+function pendNotice() {
+  const me = sessUser('gestao'), n = USERS.filter(u => u.pending && !u.active).length;
+  if (!me || me.role !== 'admin' || !n) return '';
+  return '<section class="panel notice" role="alert"><div><strong>' + n + (n > 1 ? ' pessoas aguardam' : ' pessoa aguarda') + ' autorização</strong><p class="meta">Tias e tios que se cadastraram pelo app. Abra Acessos para autorizar.</p></div><button type="button" class="btn sm primary" data-gs="acessos">Ver cadastros</button></section>';
+}
 function gPainel() {
   const inside = KIDS.filter(k => k.status === 'in').length, entered = KIDS.filter(k => k.status !== 'out').length;
   const left = KIDS.filter(k => k.status === 'left').length, vis = KIDS.filter(k => k.visitor && k.status !== 'out').length;
@@ -494,15 +466,19 @@ function gPainel() {
       '<span class="meta">' + esc(r.ages) + ' · ' + (tt ? esc(tt.name) : 'Sem tia definida') + '</span><div class="occ" aria-hidden="true"><i class="' + (c >= r.cap ? 'full' : '') + '" style="width:' + pct + '%"></i></div>' +
       (canManage() ? '<label>Capacidade da sala<input type="number" min="1" max="40" value="' + r.cap + '" data-cap="' + esc(r.id) + '"></label>' : '<span class="meta">Capacidade: ' + r.cap + ' crianças</span>') + '</article>';
   }).join('');
-  return '<div><h1>Painel</h1><p class="sub">Culto infantil · ' + esc(todayLong()) + '</p></div>' + staleHtml() +
+  return '<div><h1>Painel</h1><p class="sub">' + esc(state.svc) + ' · ' + esc(todayLong()) + '</p></div>' + pendNotice() + staleHtml() +
     '<section class="stats" aria-label="Indicadores"><div class="stat main"><b>' + inside + '</b><span>em sala agora</span></div><div class="stat"><b>' + entered + '</b><span>entraram hoje</span></div><div class="stat"><b>' + left + '</b><span>já saíram</span></div><div class="stat"><b>' + vis + '</b><span>visitantes</span></div><div class="stat' + (alg ? ' warn' : '') + '"><b>' + alg + '</b><span>com alergia em sala</span></div></section>' +
-    '<div class="two"><section class="panel"><h2>Check-in do culto</h2><p class="meta">' + (state.open ? 'Aberto: as famílias já podem fazer check-in.' : 'Fechado: as famílias ainda não conseguem entrar.') + '</p><div class="actions"><button type="button" class="btn ' + (state.open ? '' : 'hl') + '" data-toggle>' + (state.open ? 'Check-in aberto · fechar' : 'Check-in fechado · abrir') + '</button><button type="button" class="btn" data-endservice>Encerrar culto</button></div><p class="meta">Ao encerrar, as salas zeram, o check-in fecha e o total do dia vai para os relatórios.</p></section>' +
+    '<div class="two"><section class="panel"><h2>Check-in do culto</h2><div class="form inline svcf"><label>Nome do culto<input type="text" maxlength="60" data-svcname value="' + esc(state.svc) + '"></label><label>Check-in começa às<input type="text" maxlength="10" placeholder="08:30" data-opens value="' + esc(state.opens) + '"></label></div><p class="meta">' + (state.open ? 'Aberto: as famílias já podem fazer check-in.' : 'Fechado: as famílias ainda não conseguem entrar.') + '</p><div class="actions"><button type="button" class="btn ' + (state.open ? '' : 'hl') + '" data-toggle>' + (state.open ? 'Check-in aberto · fechar' : 'Check-in fechado · abrir') + '</button><button type="button" class="btn" data-endservice>Encerrar culto</button></div><p class="meta">Ao encerrar, as salas zeram, o check-in fecha e o total do dia vai para os relatórios.</p></section>' +
     '<section class="panel"><div class="vqrow">' + qr(visitorUrl()) + '<div><h2>QR Code para visitantes</h2><p class="meta">Imprima e fixe na entrada. A equipe também tem este QR Code no app, na aba Visitantes.</p><a class="btn sm" href="' + esc(visitorUrl()) + '" target="_blank" rel="noopener">Abrir página do visitante</a></div></div></section></div>' +
     '<h2>Salas</h2><div class="rcards rooms">' + rooms + '</div>' +
     '<section class="panel"><h2>Frequência dos últimos cultos</h2>' + freqChart() + '</section>';
 }
 
 const RELS = ['mãe', 'pai', 'avó', 'avô', 'tio', 'tia', 'madrinha', 'padrinho', 'outro responsável'];
+const ageNum = k => /menos/i.test(String(k.age || '')) ? 0 : Math.min(11, +((String(k.age || '').match(/\d+/) || [0])[0]));
+function kidEditForm(k) {
+  return '<form class="form inline" id="ke" data-kid="' + esc(k.id) + '" autocomplete="off"><label>Nome<input type="text" id="ke-n" maxlength="80" value="' + esc(k.name) + '"></label><label>Idade<select id="ke-a">' + ageOpts(ageNum(k)) + '</select></label><label>Sala<select id="ke-r">' + ROOMS.map(r => '<option value="' + esc(r.id) + '"' + (r.id === k.room ? ' selected' : '') + '>' + esc(r.name) + '</option>').join('') + '</select></label><label>Alergias ou restrições<input type="text" id="ke-o" maxlength="300" value="' + esc(k.note) + '"></label><label>Observações<input type="text" id="ke-b" maxlength="300" value="' + esc(k.obs) + '"></label><label>Necessidades específicas<input type="text" id="ke-s" maxlength="300" value="' + esc(k.needs) + '"></label><button type="submit" class="btn primary">Salvar criança</button></form>';
+}
 function famTable() {
   const q = state.gq.trim().toLowerCase(), ff = state.ff;
   const list = FAMS.filter(f => {
@@ -512,14 +488,19 @@ function famTable() {
     if (ff === 'alergia' && !ks.some(k => k.note)) return false;
     return !q || (f.name + ' ' + guards(f).join(' ') + ' ' + (f.phone || '') + ' ' + ks.map(k => k.name).join(' ')).toLowerCase().includes(q);
   });
-  if (!list.length) return '<div class="empty">Nenhuma família encontrada.</div>';
+  if (!list.length) return '<div class="empty">' + (FAMS.length ? 'Nenhuma família encontrada.' : 'Nenhuma família cadastrada ainda. Toque em Nova família para começar.') + '</div>';
   const rows = list.map(f => {
     const ks = KIDS.filter(k => k.fam === f.id), ed = state.fedit === f.id, gl = guards(f), fid = esc(f.id);
     const acc = USERS.find(u => u.fam === f.id && u.role === 'pais');
     const ph = acc && acc.prefs ? (acc.prefs.fotos ? '<span class="chip ok">Autorizadas</span>' : '<span class="chip left">Não autorizadas</span>') : '<span class="meta">Sem resposta</span>';
-    const edit = ed ? '<tr class="edr"><td colspan="5"><div class="edgrid"><div><p class="sec">Autorizados a retirar</p>' + gl.map((g, i) => '<div class="grow">' + esc(g) + (gl.length > 1 ? ' <button type="button" class="link" data-grm="' + fid + ':' + i + '">Remover</button>' : '') + '</div>').join('') +
-      '<form class="form inline" id="ga" data-fid="' + fid + '" autocomplete="off"><label>Nome completo<input type="text" id="ga-n" maxlength="80"></label><label>Quem é<select id="ga-r">' + RELS.map(r => '<option>' + r + '</option>').join('') + '</select></label><button type="submit" class="btn primary">Incluir pessoa</button></form></div>' +
-      '<div><p class="sec">Incluir criança</p><form class="form inline" id="ka" data-fid="' + fid + '" autocomplete="off"><label>Nome<input type="text" id="ka-n" maxlength="80"></label><label>Idade<select id="ka-a">' + ageOpts(3) + '</select></label><label>Alergias ou cuidados<input type="text" id="ka-o" maxlength="300" placeholder="Opcional"></label><button type="submit" class="btn primary">Incluir criança</button></form></div></div></td></tr>' : '';
+    const edit = ed ? '<tr class="edr"><td colspan="5"><div class="edgrid"><div>' +
+      '<p class="sec">Dados da família</p><form class="form inline" id="fe" data-fid="' + fid + '" autocomplete="off"><label>Sobrenome / nome<input type="text" id="fe-n" maxlength="80" value="' + esc(f.name) + '"></label><label>Telefone de contato<input type="tel" id="fe-p" maxlength="30" value="' + esc(f.phone) + '"></label><button type="submit" class="btn primary">Salvar dados</button></form>' +
+      '<p class="hint">O telefone usado no login do responsável não muda aqui. Para trocá-lo, crie um novo acesso em Acessos.</p>' +
+      '<p class="sec" style="margin-top:16px">Autorizados a retirar</p>' + gl.map((g, i) => '<div class="grow">' + esc(g) + (gl.length > 1 ? ' <button type="button" class="link" data-grm="' + fid + ':' + i + '">Remover</button>' : '') + '</div>').join('') +
+      '<form class="form inline" id="ga" data-fid="' + fid + '" autocomplete="off"><label>Nome completo<input type="text" id="ga-n" maxlength="80"></label><label>Quem é<select id="ga-r">' + RELS.map(r => '<option>' + r + '</option>').join('') + '</select></label><button type="submit" class="btn primary">Incluir pessoa</button></form>' +
+      '<button type="button" class="btn sm danger" data-fdel="' + fid + '">Excluir esta família</button></div>' +
+      '<div><p class="sec">Crianças</p>' + ks.map(k => '<div class="grow">' + esc(k.name) + ' <button type="button" class="link" data-kedit="' + esc(k.id) + '">Editar</button> <button type="button" class="link" data-kdel="' + esc(k.id) + '">Excluir</button></div>' + (state.kedit === k.id ? kidEditForm(k) : '')).join('') +
+      '<p class="sec" style="margin-top:16px">Incluir criança</p><form class="form inline" id="ka" data-fid="' + fid + '" autocomplete="off"><label>Nome<input type="text" id="ka-n" maxlength="80"></label><label>Idade<select id="ka-a">' + ageOpts(3) + '</select></label><label>Alergias ou cuidados<input type="text" id="ka-o" maxlength="300" placeholder="Opcional"></label><button type="submit" class="btn primary">Incluir criança</button></form></div></div></td></tr>' : '';
     return '<tr><td><strong>Família ' + esc(f.name) + '</strong>' + (f.visitor ? ' <span class="chip sun">Visitante</span>' : '') + '<div class="meta">' + esc(f.phone) + '</div></td>' +
       '<td>' + (ks.map(k => '<div class="kmini">' + avatar(k, 'sm') + '<span>' + esc(k.name) + ' <span class="meta">· ' + esc(k.age) + ' · ' + esc(room(k.room).name) + '</span>' + (k.note ? '<span class="chip hot">' + esc(k.note) + '</span>' : '') + '</span></div>').join('') || '<span class="meta">Nenhuma</span>') + '</td>' +
       '<td>' + gl.length + '</td><td>' + ph + '</td><td><button type="button" class="btn sm" data-fedit="' + fid + '">' + (ed ? 'Fechar' : 'Editar') + '</button></td></tr>' + edit;
@@ -545,12 +526,14 @@ function gEquipe() {
 }
 
 function gAgenda() {
-  const form = state.eform ? '<form class="form inline" id="ne" autocomplete="off"><label>Data (dia/mês)<input type="text" id="ne-d" placeholder="29/11" inputmode="numeric" maxlength="5"></label><label>Horário<input type="text" id="ne-t" placeholder="9h" maxlength="12"></label><label>Título<input type="text" id="ne-n" placeholder="Culto infantil" maxlength="80"></label><label>Observação<input type="text" id="ne-o" placeholder="Opcional" maxlength="200"></label><button type="submit" class="btn primary">Salvar evento</button></form>' : '';
+  const ed = state.eedit ? EVENTS.find(e => e.id === state.eedit) : null, show = state.eform || !!ed;
+  const dv = ed ? ed.day + '/' + String(MONTHS.indexOf(ed.mon) + 1).padStart(2, '0') : '';
+  const form = show ? '<form class="form inline" id="ne" data-eid="' + esc(ed ? ed.id : '') + '" autocomplete="off"><label>Data (dia/mês)<input type="text" id="ne-d" placeholder="29/11" inputmode="numeric" maxlength="5" value="' + esc(dv) + '"></label><label>Horário<input type="text" id="ne-t" placeholder="9h" maxlength="12" value="' + esc(ed ? ed.t : '') + '"></label><label>Título<input type="text" id="ne-n" placeholder="Culto infantil" maxlength="80" value="' + esc(ed ? ed.n : '') + '"></label><label>Observação<input type="text" id="ne-o" placeholder="Opcional" maxlength="200" value="' + esc(ed ? ed.note : '') + '"></label><button type="submit" class="btn primary">' + (ed ? 'Salvar alterações' : 'Salvar evento') + '</button></form>' : '';
   const t0 = startOfToday().getTime(), all = EVENTS.slice().sort((a, b) => evTs(a) - evTs(b));
   const list = all.filter(e => evTs(e) >= t0).concat(all.filter(e => evTs(e) < t0).slice(-5).reverse());
-  return '<div class="head"><div><h1>Agenda</h1><p class="sub">O que você publicar aparece no app dos pais. Eventos que já passaram saem da agenda deles.</p></div><button type="button" class="btn primary" data-eform>' + (state.eform ? 'Fechar formulário' : 'Novo evento') + '</button></div>' + form +
-    (list.length ? '' : '<p class="hint">Nenhum evento cadastrado ainda.</p>') +
-    '<div class="rcards">' + list.map(e => '<article class="rc ev" style="grid-template-columns:auto 1fr;display:grid;align-items:center;gap:14px"><div class="date"><b>' + esc(e.day) + '</b><small>' + esc(e.mon) + '</small></div><div><strong>' + esc(e.n) + '</strong>' + (evTs(e) < t0 ? ' <span class="chip left">Já passou</span>' : '') + '<span class="meta">' + esc(e.w) + ' · ' + esc(e.t) + '</span><span class="meta">' + esc(e.note) + '</span></div></article>').join('') + '</div>';
+  return '<div class="head"><div><h1>Agenda</h1><p class="sub">O que você publicar aparece no app dos pais. Eventos que já passaram saem da agenda deles.</p></div><button type="button" class="btn primary" data-eform>' + (show ? 'Fechar formulário' : 'Novo evento') + '</button></div>' + form +
+    (list.length ? '' : '<div class="empty">Nenhum evento cadastrado ainda. Toque em Novo evento para publicar o primeiro.</div>') +
+    '<div class="rcards">' + list.map(e => '<article class="rc"><div class="ev"><div class="date"><b>' + esc(e.day) + '</b><small>' + esc(e.mon) + '</small></div><div><strong>' + esc(e.n) + '</strong>' + (evTs(e) < t0 ? ' <span class="chip left">Já passou</span>' : '') + '<span class="meta">' + esc(e.w) + ' · ' + esc(e.t) + '</span><span class="meta">' + esc(e.note) + '</span></div></div><div class="acts"><button type="button" class="btn sm" data-eedit="' + esc(e.id) + '">Editar</button><button type="button" class="btn sm" data-edel="' + esc(e.id) + '">Excluir</button></div></article>').join('') + '</div>';
 }
 
 function gRelatorios() {
@@ -576,12 +559,22 @@ function noticeHtml() {
 
 const famOpts = sel => FAMS.filter(f => !f.visitor).map(f => '<option value="' + esc(f.id) + '"' + (f.id === sel ? ' selected' : '') + '>Família ' + esc(f.name) + '</option>').join('');
 
+function pendHtml() {
+  const list = USERS.filter(u => u.pending && !u.active);
+  if (!list.length) return '';
+  return '<section class="panel pend"><h2>Aguardando autorização (' + list.length + ')</h2><p class="meta">Estas pessoas se cadastraram pelo app. Escolha a sala e autorize, ou recuse.</p>' + list.map(u =>
+    '<div class="prow2"><div><strong>' + esc(u.name) + '</strong><div class="meta">' + esc(u.login) + '</div></div>' +
+    '<label>Sala<select data-psala="' + esc(u.id) + '">' + ROOMS.map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>').join('') + '</select></label>' +
+    '<label>Também é responsável por uma família<select data-pfam="' + esc(u.id) + '"><option value="">Nenhuma</option>' + famOpts('') + '</select></label>' +
+    '<div class="acts"><button type="button" class="btn primary sm" data-pauth="' + esc(u.id) + '">Autorizar</button><button type="button" class="btn sm" data-pdeny="' + esc(u.id) + '">Recusar</button></div></div>').join('') + '</section>';
+}
+
 function acessosTable() {
   const me = sessUser('gestao'), f = state.af, q = state.aq.trim().toLowerCase();
   const list = USERS.filter(u => !u.replaced).filter(u => f === 'todos' || (f === 'pais' && u.role === 'pais') || (f === 'tias' && u.role === 'tia') || (f === 'gestao' && STAFF_ROLES.includes(u.role))).filter(u => !q || (u.name + ' ' + (u.login || '') + ' ' + (u.phone || '')).toLowerCase().includes(q));
   if (!list.length) return '<div class="empty">Nenhum acesso encontrado.</div>';
-  const rows = list.map(u => '<tr><td><strong>' + esc(u.name) + '</strong></td><td>' + ROLES[u.role] + (u.role === 'tia' ? '<select class="mini" data-ulink="' + esc(u.id) + '" aria-label="Família de ' + esc(u.name) + '"><option value="">Sem família</option>' + famOpts(u.fam) + '</select>' : '') + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : 'left') + '">' + (u.active ? 'Ativo' : 'Desativado') + '</span></td><td><div class="acts">' +
-    (u.id === me.id ? '<span class="meta">Você</span>' : '<button type="button" class="btn sm" data-utoggle="' + esc(u.id) + '">' + (u.active ? 'Desativar' : 'Reativar') + '</button>') +
+  const rows = list.map(u => '<tr><td><strong>' + esc(u.name) + '</strong></td><td>' + ROLES[u.role] + (u.role === 'tia' ? '<select class="mini" data-ulink="' + esc(u.id) + '" aria-label="Família de ' + esc(u.name) + '"><option value="">Sem família</option>' + famOpts(u.fam) + '</select>' : '') + '</td><td>' + esc(u.login || u.phone) + '</td><td><span class="chip ' + (u.active ? 'ok' : u.pending ? 'sun' : 'left') + '">' + (u.active ? 'Ativo' : u.pending ? 'Pendente' : 'Desativado') + '</span></td><td><div class="acts">' +
+    (u.id === me.id ? '<span class="meta">Você</span>' : u.pending ? '' : '<button type="button" class="btn sm" data-utoggle="' + esc(u.id) + '">' + (u.active ? 'Desativar' : 'Reativar') + '</button>') +
     '<button type="button" class="btn sm" data-ureset="' + esc(u.id) + '">Redefinir senha</button></div></td></tr>').join('');
   return '<div class="tbl"><table><thead><tr><th>Nome</th><th>Perfil</th><th>Login</th><th>Estado</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
@@ -590,7 +583,7 @@ function gAcessos() {
   const f = state.af;
   const pills = [['todos', 'Todos'], ['pais', 'Pais'], ['tias', 'Tias'], ['gestao', 'Gestão']].map(x => '<button type="button" data-af="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>').join('');
   const form = state.aform ? '<form class="form inline" id="na" autocomplete="off"><label>Nome<input type="text" id="na-n" placeholder="Nome completo"></label><label>E-mail<input type="text" id="na-e" inputmode="email" autocapitalize="none" placeholder="nome@exemplo.com"></label><label>Perfil<select id="na-r">' + [['tia', 'Equipe de sala (tia)'], ['recepcao', 'Recepção'], ['coord', 'Coordenação'], ['admin', 'Administrador']].map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select></label><label>Sala (só para tias)<select id="na-s">' + ROOMS.map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>').join('') + '</select></label><label>Também é responsável por uma família (só para tias)<select id="na-f"><option value="">Nenhuma</option>' + famOpts('') + '</select></label><button type="submit" class="btn primary">Criar acesso</button></form>' : '';
-  return noticeHtml() + '<div class="head"><div><h1>Acessos</h1><p class="sub">Quem pode entrar em cada app. Desativar uma conta tira a pessoa do app na hora.</p></div><button type="button" class="btn primary" data-aform>' + (state.aform ? 'Fechar formulário' : 'Novo acesso') + '</button></div>' + form +
+  return noticeHtml() + pendHtml() + '<div class="head"><div><h1>Acessos</h1><p class="sub">Quem pode entrar em cada app. Desativar uma conta tira a pessoa do app na hora.</p></div><button type="button" class="btn primary" data-aform>' + (state.aform ? 'Fechar formulário' : 'Novo acesso') + '</button></div>' + form +
     '<div class="tools"><input type="text" id="a-q" value="' + esc(state.aq) + '" placeholder="Buscar por nome, e-mail ou telefone" aria-label="Buscar acessos"><div class="pills" role="group" aria-label="Filtrar acessos">' + pills + '</div></div>' +
     '<div id="alist">' + acessosTable() + '</div>';
 }
@@ -664,6 +657,10 @@ function renderSheet() {
       '<div class="quick">' + q + '</div><textarea id="msg" rows="3" aria-label="Mensagem" placeholder="Escreva a mensagem">' + esc(s.text) + '</textarea>' +
       '<div class="actions"><button type="button" class="btn primary" data-send>Enviar aviso</button><button type="button" class="btn" data-cancel>Cancelar</button></div></div></div>';
   }
+  if (s.type === 'move') {
+    const to = ROOMS.filter(r => r.id !== k.room).map(r => '<label><input type="radio" name="to" value="' + esc(r.id) + '">' + esc(r.name) + ' <span class="meta">(' + inRoom(r.id) + '/' + r.cap + ')</span></label>').join('');
+    return '<div class="overlay" data-close><div class="sheet" role="dialog" aria-modal="true" aria-label="Transferir de sala" data-sheet><h2>Transferir ' + esc(k.name) + '</h2><p class="meta">Hoje ela está em ' + esc(room(k.room).name) + '. Para qual sala vai?</p><div class="opts">' + to + '</div><div class="actions"><button type="button" class="btn primary" data-domove>Transferir</button><button type="button" class="btn" data-cancel>Cancelar</button></div></div></div>';
+  }
   const opts = guards(f).map((g, i) => '<label><input type="radio" name="who" value="' + i + '"' + (s.who === String(i) ? ' checked' : '') + '>' + esc(g) + '</label>').join('') +
     '<label><input type="radio" name="who" value="x"' + (s.who === 'x' ? ' checked' : '') + '>Outra pessoa, não cadastrada</label>';
   return '<div class="overlay" data-close><div class="sheet" role="dialog" aria-modal="true" aria-label="Check-out" data-sheet>' +
@@ -691,12 +688,9 @@ document.addEventListener('click', e => {
   const d = t.dataset, p = state.p, ts = state.t;
   if ('print' in d) { window.print(); return; }
   if ('newvisit' in d) { state.visit = null; return render(); }
-  if (d.fill) {
-    const u = USERS.find(x => x.id === d.fill), a = $('#l-user'), b = $('#l-pass');
-    if (u && a && b) { a.value = u.login || u.phone; b.value = u.pass; b.type = 'password'; const s = $('[data-showpass]'); if (s) s.textContent = 'Mostrar'; b.focus(); }
-    return;
-  }
   if ('pushon' in d) { Cloud.enablePush().then(r => { toast(r.ok ? 'Notificações ativadas neste aparelho.' : r.err); render(); }); return; }
+  if ('regtia' in d) { state.lreg = true; state.lok = ''; state.lerr.reg = null; return render(); }
+  if ('regback' in d) { state.lreg = false; return render(); }
   if ('showpass' in d) { const b = $('#l-pass'); b.type = b.type === 'password' ? 'text' : 'password'; t.textContent = b.type === 'password' ? 'Mostrar' : 'Ocultar'; return; }
   if ('forgot' in d) {
     if (cloudOn()) {
@@ -711,6 +705,20 @@ document.addEventListener('click', e => {
   if ('ndismiss' in d) { state.notice = null; return render(); }
   if ('aform' in d) { state.aform = !state.aform; return render(); }
   if (d.af) { state.af = d.af; return render(); }
+  if (d.pauth) {
+    const u = USERS.find(x => x.id === d.pauth); if (!u || !cloudOn()) return;
+    const sel = n => document.querySelector('[data-' + n + '="' + CSS.escape(d.pauth) + '"]'), rm = (sel('psala') || {}).value || ROOMS[0].id, fm = (sel('pfam') || {}).value || '', tid = 't' + uid8();
+    Cloud.call('authorize', { uid: u.id, tia: tid, fam: fm }).then(() => {
+      TIAS.push({ id: tid, name: u.name, room: rm }); log(actor(), 'Autorizou ' + u.name + ' na equipe (' + room(rm).name + ').'); render(); toast(first(u.name) + ' foi autorizado(a).');
+    }).catch(err => toast(err.message));
+    return;
+  }
+  if (d.pdeny) {
+    const u = USERS.find(x => x.id === d.pdeny); if (!u || !cloudOn()) return;
+    if (!window.confirm('Recusar o cadastro de ' + u.name + '?')) return;
+    Cloud.call('reject', { uid: u.id }).then(() => { log(actor(), 'Recusou o cadastro de ' + u.name + '.'); render(); toast('Cadastro recusado.'); }).catch(err => toast(err.message));
+    return;
+  }
   if (d.utoggle) {
     const u = USERS.find(x => x.id === d.utoggle); if (!u || u.id === state.sess.gestao) return;
     if (cloudOn()) {
@@ -740,7 +748,20 @@ document.addEventListener('click', e => {
   if ('toggle' in d) { if (!state.open && staleN()) endService(); state.open = !state.open; log(actor(), state.open ? 'Check-in aberto para o culto.' : 'Check-in fechado.'); render(); toast(state.open ? 'Check-in aberto. As famílias já podem entrar.' : 'Check-in fechado.'); return; }
   if (d.gs) { state.g = d.gs; state.notice = null; return render(); }
   if (d.ff) { state.ff = d.ff; return render(); }
-  if (d.fedit) { state.fedit = state.fedit === d.fedit ? null : d.fedit; return render(); }
+  if (d.fedit) { state.fedit = state.fedit === d.fedit ? null : d.fedit; state.kedit = null; return render(); }
+  if (d.kedit) { state.kedit = state.kedit === d.kedit ? null : d.kedit; return render(); }
+  if (d.kdel) {
+    const k = KIDS.find(x => x.id === d.kdel); if (!k) return;
+    if (!window.confirm('Excluir ' + k.name + ' do cadastro?')) return;
+    KIDS.splice(KIDS.indexOf(k), 1); state.kedit = null; log(actor(), 'Criança excluída: ' + k.name + '.'); render(); toast('Criança excluída.'); return;
+  }
+  if (d.fdel) {
+    const f = FAMS.find(x => x.id === d.fdel); if (!f) return;
+    const ks = KIDS.filter(k => k.fam === f.id);
+    if (!window.confirm('Excluir a família ' + f.name + ' e ' + ks.length + (ks.length === 1 ? ' criança' : ' crianças') + '? Os acessos de login não são apagados.')) return;
+    ks.forEach(k => KIDS.splice(KIDS.indexOf(k), 1)); FAMS.splice(FAMS.indexOf(f), 1); state.fedit = null; state.kedit = null;
+    log(actor(), 'Família excluída: ' + f.name + '.'); render(); toast('Família excluída.'); return;
+  }
   if (d.grm) {
     const [fid, ix] = d.grm.split(':'), f = FAMS.find(x => x.id === fid), i = +ix;
     if (!f || !guards(f)[i] || guards(f).length < 2) return;
@@ -748,7 +769,14 @@ document.addEventListener('click', e => {
     const gone = f.guardians.splice(i, 1)[0]; log(actor(), 'Removeu ' + gone.split(' (')[0] + ' dos autorizados da família ' + f.name + '.'); render(); toast('Pessoa removida da lista.'); return;
   }
   if ('gform' in d) { state.gform = !state.gform; return render(); }
-  if ('eform' in d) { state.eform = !state.eform; return render(); }
+  if ('eform' in d) { state.eform = !state.eform; state.eedit = null; return render(); }
+  if (d.eedit) { state.eedit = d.eedit; state.eform = false; return render(); }
+  if (d.edel) {
+    const ev = EVENTS.find(x => x.id === d.edel); if (!ev) return;
+    if (!window.confirm('Excluir "' + ev.n + '" da agenda?')) return;
+    EVENTS.splice(EVENTS.indexOf(ev), 1); if (state.eedit === d.edel) state.eedit = null;
+    log(actor(), 'Evento excluído: ' + ev.n + '.'); render(); toast('Evento excluído.'); return;
+  }
   if (d.tab) { p.tab = d.tab; p.screen = null; if (d.tab === 'avisos') markSeen(); return render(); }
   if ('pushopen' in d) { markSeen(); p.tab = 'avisos'; p.screen = null; return render(); }
   if ('pushclose' in d) { markSeen(); return render(); }
@@ -781,6 +809,15 @@ document.addEventListener('click', e => {
     toast('Check-in de ' + k.name.split(' ')[0] + ' feito.'); return;
   }
   if (d.alert) { state.sheet = { type: 'alert', kid: d.alert, key: null, text: '' }; return render(); }
+  if (d.move) { state.sheet = { type: 'move', kid: d.move }; return render(); }
+  if ('domove' in d) {
+    const s = state.sheet, pick = document.querySelector('input[name="to"]:checked'), k = kid(s.kid);
+    if (!pick) { toast('Escolha a sala.'); return; }
+    const to = pick.value;
+    if (inRoom(to) >= room(to).cap) { toast(room(to).name + ' está lotada.'); return; }
+    const from = room(k.room).name; k.room = to; k.moved = ((tia() || {}).name || 'Equipe') + ' às ' + now(); state.sheet = null;
+    log((tia() || {}).name || 'Equipe', k.name + ' transferida de ' + from + ' para ' + room(to).name + '.'); render(); toast(k.name.split(' ')[0] + ' foi para ' + room(to).name + '.'); return;
+  }
   if (d.out) { state.sheet = { type: 'out', kid: d.out, who: null, blocked: false }; return render(); }
   if (d.quick) {
     const q = QUICK.find(x => x.key === d.quick), s = state.sheet;
@@ -847,6 +884,19 @@ document.addEventListener('submit', e => {
     log(u.name, 'Entrou no app (' + ROLES[u.role] + ').');
     render(); toast('Bem-vindo, ' + first(u.name) + '!'); return;
   }
+  if (id === 'rg') {
+    e.preventDefault();
+    const nm = $('#rg-n').value.trim(), em = $('#rg-e').value.trim().toLowerCase(), pw = $('#rg-p').value;
+    if (!nm || !/^\S+@\S+\.\S+$/.test(em)) { state.lerr.reg = 'Informe o nome e um e-mail válido.'; render(); return; }
+    if (pw.length < 8) { state.lerr.reg = 'A senha precisa ter pelo menos 8 caracteres.'; render(); return; }
+    const btn = e.target.querySelector('[type=submit]'); if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+    Cloud.register(nm, em, pw).then(r => {
+      if (r.err) { state.lerr.reg = r.err; render(); return; }
+      state.lerr.reg = null; state.lreg = false; state.lval.familia = em;
+      state.lok = 'Cadastro enviado! Assim que o administrador autorizar, você entra com este e-mail e a senha que criou.'; render();
+    });
+    return;
+  }
   if (id === 'bs') {
     e.preventDefault();
     const nm = $('#bs-n').value.trim(), em = $('#bs-e').value.trim(), pw = $('#bs-p').value;
@@ -902,6 +952,21 @@ document.addEventListener('submit', e => {
     }
     finish(newPass(), true); return;
   }
+  if (id === 'fe') {
+    e.preventDefault();
+    const f = FAMS.find(x => x.id === e.target.dataset.fid), n = $('#fe-n').value.trim();
+    if (!f || !n) { toast('Informe o nome da família.'); return; }
+    f.name = n.slice(0, 80); f.phone = $('#fe-p').value.trim().slice(0, 30);
+    log(actor(), 'Dados da família ' + f.name + ' alterados.'); render(); toast('Dados salvos.'); return;
+  }
+  if (id === 'ke') {
+    e.preventDefault();
+    const k = KIDS.find(x => x.id === e.target.dataset.kid), n = $('#ke-n').value.trim();
+    if (!k || !n) { toast('Informe o nome da criança.'); return; }
+    k.name = n.slice(0, 80); k.age = ageLabel(+$('#ke-a').value); k.room = $('#ke-r').value;
+    k.note = $('#ke-o').value.trim().slice(0, 300); k.obs = $('#ke-b').value.trim().slice(0, 300); k.needs = $('#ke-s').value.trim().slice(0, 300);
+    state.kedit = null; log(actor(), 'Cadastro de ' + k.name + ' alterado.'); render(); toast('Criança atualizada.'); return;
+  }
   if (id === 'ga' || id === 'ka') {
     e.preventDefault();
     const f = FAMS.find(x => x.id === e.target.dataset.fid); if (!f) return;
@@ -925,9 +990,12 @@ document.addEventListener('submit', e => {
     let d = new Date(t0.getFullYear(), mm - 1, dd);
     if (d < t0) d = new Date(t0.getFullYear() + 1, mm - 1, dd);
     if (mm < 1 || mm > 12 || d.getDate() !== dd || d.getMonth() !== mm - 1) { toast('Essa data não existe. Confira o dia e o mês.'); return; }
-    EVENTS.push({ id: 'e' + uid8(), at: Date.now(), ts: d.getTime(), day: String(dd).padStart(2, '0'), mon: MONTHS[mm - 1], w: WEEK[d.getDay()], t: tm, n, note: $('#ne-o').value.trim().slice(0, 200) });
-    log(actor(), 'Evento criado: ' + n + ' em ' + String(dd).padStart(2, '0') + '/' + String(mm).padStart(2, '0') + '.');
-    state.eform = false; render(); toast('Evento publicado na agenda dos pais.'); return;
+    const data = { ts: d.getTime(), day: String(dd).padStart(2, '0'), mon: MONTHS[mm - 1], w: WEEK[d.getDay()], t: tm, n, note: $('#ne-o').value.trim().slice(0, 200) };
+    const eid = e.target.dataset.eid, cur = eid ? EVENTS.find(x => x.id === eid) : null;
+    if (cur) Object.assign(cur, data); else EVENTS.push(Object.assign({ id: 'e' + uid8(), at: Date.now() }, data));
+
+    log(actor(), (cur ? 'Evento alterado: ' : 'Evento criado: ') + n + ' em ' + String(dd).padStart(2, '0') + '/' + String(mm).padStart(2, '0') + '.');
+    state.eform = false; state.eedit = null; render(); toast(cur ? 'Evento atualizado.' : 'Evento publicado na agenda dos pais.'); return;
   }
 });
 function resizePhoto(file) {
@@ -961,6 +1029,8 @@ document.addEventListener('change', e => {
     const b = $('#doci');
     if (b) { b.disabled = !s.length; b.textContent = s.length ? 'Fazer check-in (' + s.length + ')' : 'Fazer check-in'; }
   }
+  if ('svcname' in ds) { state.svc = e.target.value.trim().slice(0, 60) || 'Culto infantil'; log(actor(), 'Nome do culto: ' + state.svc + '.'); render(); toast('Nome do culto salvo.'); return; }
+  if ('opens' in ds) { state.opens = e.target.value.trim().slice(0, 10); render(); toast('Horário salvo.'); return; }
   if (ds.pref) {
     state.prefs[ds.pref] = e.target.checked;
     if (cloudOn()) Cloud.savePrefs(state.prefs).then(r => toast(r.ok ? 'Preferência salva.' : r.err)); else toast('Preferência salva.');
@@ -975,6 +1045,7 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'tq') { state.t.q = e.target.value; render(); const el = $('#tq'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
   if (e.target.id === 'g-q') { state.gq = e.target.value; $('#flist').innerHTML = famTable(); }
   if (e.target.id === 'a-q') { state.aq = e.target.value; $('#alist').innerHTML = acessosTable(); }
 });
@@ -982,8 +1053,4 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.shee
 
 if ($('#logo-h')) $('#logo-h').innerHTML = logoH();
 if (cloudOn()) Cloud.boot();
-else {
-  state.alerts.push({ id: 'a1', kid: 'k1', fam: 'souza', text: 'Davi está chorando e não se acalma. Pode vir até a sala?', time: '09:41', reply: false, seen: false, by: 'Tia Joana' });
-  state.audit.push({ id: 'l1', t: '08:30', who: 'Gestão', text: 'Check-in aberto para o culto.' }, { id: 'l2', t: '09:41', who: 'Tia Joana', text: 'Aviso enviado aos pais de Davi Souza.' });
-}
 render();

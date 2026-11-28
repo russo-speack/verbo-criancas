@@ -27,7 +27,7 @@
   const S = (v, n) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, n);
   function clean(col, o) {
     const txt = (keys, n) => keys.forEach(k => { if (k in o) o[k] = S(o[k], n); });
-    if (col === 'kids') { txt(['name', 'note', 'obs'], 300); txt(['age', 'room', 'fam', 'by', 'code', 'day', 'pick'], 100); if ('photo' in o && !(typeof o.photo === 'string' && o.photo.length <= 30000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(o.photo))) o.photo = ''; if ('visits' in o) o.visits = Array.isArray(o.visits) ? o.visits.slice(-60).map(v => ({ d: S(v && v.d, 10), i: S(v && v.i, 5), o: S(v && v.o, 5) })) : []; txt(['time', 'out'], 5); if ('status' in o && !['in', 'out', 'left'].includes(o.status)) o.status = 'out'; }
+    if (col === 'kids') { txt(['name', 'note', 'obs'], 300); txt(['age', 'room', 'fam', 'by', 'code', 'day', 'pick'], 100); txt(['needs', 'moved'], 300); if ('photo' in o && !(typeof o.photo === 'string' && o.photo.length <= 30000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(o.photo))) o.photo = ''; if ('visits' in o) o.visits = Array.isArray(o.visits) ? o.visits.slice(-60).map(v => ({ d: S(v && v.d, 10), i: S(v && v.i, 5), o: S(v && v.o, 5) })) : []; txt(['time', 'out'], 5); if ('status' in o && !['in', 'out', 'left'].includes(o.status)) o.status = 'out'; }
     else if (col === 'families') { txt(['name', 'phone'], 100); o.guardians = Array.isArray(o.guardians) ? o.guardians.slice(0, 20).map(g => S(g, 100)) : []; }
     else if (col === 'alerts') { txt(['text'], 500); txt(['time', 'kid', 'fam', 'by'], 100); if ('reply' in o) o.reply = o.reply === true; if ('seen' in o) o.seen = o.seen === true; if ('at' in o) o.at = +o.at || 0; }
     else if (col === 'events') { txt(['day', 'mon', 'w', 't', 'n'], 80); txt(['note'], 300); if ('ts' in o) o.ts = +o.ts || 0; }
@@ -101,7 +101,7 @@
 
   function watchPublic() {
     unsubs.push(db.doc('config/main').onSnapshot(s => {
-      if (s.exists) { const d = s.data(); state.open = d.open !== false; state.counts = d.counts || {}; state.hist = Array.isArray(d.hist) ? d.hist.slice(-60) : []; }
+      if (s.exists) { const d = s.data(); state.open = d.open !== false; state.counts = d.counts || {}; state.hist = Array.isArray(d.hist) ? d.hist.slice(-60) : []; state.svc = S(d.svcName, 60) || 'Culto infantil'; state.opens = S(d.opens, 10); }
       C.needsSetup = !s.exists; loaded.config = true; rerender();
     }, e => console.warn('config', e && e.code)));
   }
@@ -165,6 +165,10 @@
         seen[o.id] = s;
         db.collection(col).doc(o.id).set(JSON.parse(s), { merge: col === 'users' }).catch(e => fail(col, e));
       });
+      // o que foi excluído aqui some também do servidor
+      if (['events', 'kids', 'families', 'tias'].includes(col)) Object.keys(seen).forEach(id => {
+        if (!cols[col].some(o => o.id === id)) { delete seen[id]; db.collection(col).doc(id).delete().catch(e => fail(col, e)); }
+      });
     });
   };
 
@@ -172,7 +176,7 @@
     if (!loaded.config || C.needsSetup) return;
     const counts = {};
     ROOMS.forEach(r => { counts[r.id] = KIDS.filter(k => k.room === r.id && k.status === 'in').length; });
-    const doc = { open: state.open, counts, bootstrapped: true, hist: (state.hist || []).slice(-60) }, s = stable(doc);
+    const doc = { open: state.open, counts, bootstrapped: true, hist: (state.hist || []).slice(-60), svcName: state.svc || 'Culto infantil', opens: state.opens || '' }, s = stable(doc);
     if (last.config === s) return;
     last.config = s;
     db.doc('config/main').set(doc).catch(e => fail('config', e));
@@ -243,7 +247,7 @@
       const snap = await db.collection('users').doc(cred.user.uid).get();
       const p = snap.exists ? Object.assign({}, snap.data(), { id: cred.user.uid }) : null;
       if (!p || !appRoles(app).includes(p.role)) { await auth.signOut(); return { err: copy.wrong }; }
-      if (p.active === false) { await auth.signOut(); return { err: 'Esta conta está desativada. Fale com a coordenação.' }; }
+      if (p.active === false) { await auth.signOut(); return { err: p.pending ? 'Seu cadastro ainda aguarda a autorização do administrador.' : 'Esta conta está desativada. Fale com a coordenação.' }; }
       adopt(p);
       return { user: p };
     } catch (e) {
@@ -259,6 +263,23 @@
       if (sub) await db.collection('pushsubs').doc(await sha(sub.endpoint)).delete();
     } catch (e) { /* sem inscrição ou sem permissão */ }
   }
+  // tia ou tio se cadastra sozinho: a conta nasce pendente e só entra depois que o administrador autoriza
+  C.register = async function (name, email, pass) {
+    await readyPromise;
+    name = String(name || '').trim().slice(0, 80); email = String(email || '').trim().toLowerCase();
+    if (!name || !/^\S+@\S+\.\S+$/.test(email)) return { err: 'Informe o nome e um e-mail válido.' };
+    if (pass.length < 8) return { err: 'A senha precisa ter pelo menos 8 caracteres.' };
+    loggingIn = true;
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await db.collection('users').doc(cred.user.uid).set({ id: cred.user.uid, role: 'tia', name, login: email, active: false, pending: true, tia: '', fam: '' });
+      await auth.signOut();
+      return { ok: true };
+    } catch (e) {
+      if (e && e.code === 'auth/email-already-in-use') return { err: 'Já existe um cadastro com este e-mail. Se já foi autorizado, volte e entre com a sua senha.' };
+      return { err: msg(e) || 'Não foi possível enviar o cadastro.' };
+    } finally { loggingIn = false; }
+  };
   C.logout = async function () { await dropPushDoc(); return auth ? auth.signOut() : undefined; };
   C.savePrefs = async function (prefs) {
     try { await db.collection('users').doc(C.profile.id).update({ prefs: { fotos: !!prefs.fotos } }); return { ok: true }; }
@@ -343,6 +364,14 @@
   C.call = async function (name, data) {
     if (name === 'createAccount') return createAccount(data);
     if (name === 'resetPassword') return resetPassword(data);
+    if (name === 'authorize') {
+      if (!C.profile || C.profile.role !== 'admin') throw new Error('Só o administrador autoriza cadastros.');
+      await db.collection('users').doc(data.uid).update({ active: true, pending: false, tia: String(data.tia), fam: data.fam ? String(data.fam) : '' }); return { ok: true };
+    }
+    if (name === 'reject') {
+      if (!C.profile || C.profile.role !== 'admin') throw new Error('Só o administrador recusa cadastros.');
+      await db.collection('users').doc(data.uid).delete(); return { ok: true };
+    }
     if (name === 'setActive') {
       if (!C.profile || C.profile.role !== 'admin') throw new Error('Só o administrador muda o estado de um acesso.');
       await db.collection('users').doc(data.uid).update({ active: data.active === true }); return { ok: true };
